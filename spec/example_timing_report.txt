@@ -1,0 +1,136 @@
+================================================================================
+Timing constraint: TS_cpu_clk = PERIOD TIMEGRP "cpu_clk" TS_USER_CLK / 0.5 HIGH 
+50%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 73245958 paths analyzed, 6219 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is  19.897ns.
+--------------------------------------------------------------------------------
+
+Paths for end point CPU/instrMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP (RAMB36_X2Y15.ADDRBL11), 115685 paths
+--------------------------------------------------------------------------------
+Slack (setup path):     0.103ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               CPU/dataMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[15].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP (RAM)
+  Destination:          CPU/instrMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP (RAM)
+  Requirement:          20.000ns
+  Data Path Delay:      19.352ns (Levels of Logic = 12)
+  Clock Path Skew:      -0.446ns (1.309 - 1.755)
+  Source Clock:         cpu_clk_g rising at 0.000ns
+  Destination Clock:    cpu_clk_g rising at 20.000ns
+  Clock Uncertainty:    0.099ns
+
+  Clock Uncertainty:          0.099ns  ((TSJ^2 + DJ^2)^1/2) / 2 + PE
+    Total System Jitter (TSJ):  0.070ns
+    Discrete Jitter (DJ):       0.183ns
+    Phase Error (PE):           0.000ns
+
+  Maximum Data Path: CPU/dataMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[15].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP to CPU/instrMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP
+    Location                Delay type         Delay(ns)  Physical Resource
+                                                          Logical Resource(s)
+    ----------------------------------------------------  -------------------
+    RAMB36_X0Y26.DOADOU0    Trcko_DOWA            2.180   CPU/dataMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[15].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP
+                                                          CPU/dataMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[15].ram.r/v5_init.ram/SP.SINGLE_PRIM36.SP
+    SLICE_X11Y110.D1        net (fanout=1)        2.302   CPU/dataMem/BU2/U0/blk_mem_generator/valid.cstr/ram_douta14<1>
+    SLICE_X11Y110.D         Tilo                  0.094   CPU/Data_In_dmem<25>
+                                                          CPU/dataMem/BU2/U0/blk_mem_generator/valid.cstr/has_mux_a.A/Mmux_dout_mux541
+    SLICE_X11Y110.C6        net (fanout=1)        0.139   CPU/Data_In_dmem<25>
+    SLICE_X11Y110.C         Tilo                  0.094   CPU/Data_In_dmem<25>
+                                                          CPU/dpath/Data_In<25>1
+    SLICE_X23Y106.B2        net (fanout=3)        1.291   CPU/dpath/Data_In<25>
+    SLICE_X23Y106.B         Tilo                  0.094   CPU/dpath/write_to_reg_M<1>68
+                                                          CPU/dpath/write_to_reg_M<1>68
+    SLICE_X26Y90.A3         net (fanout=2)        1.591   CPU/dpath/write_to_reg_M<1>68
+    SLICE_X26Y90.A          Tilo                  0.094   N107
+                                                          CPU/dpath/write_to_reg_M<1>213_SW0
+    SLICE_X24Y91.C1         net (fanout=3)        0.898   N248
+    SLICE_X24Y91.C          Tilo                  0.094   N351
+                                                          CPU/dpath/ALU_rd2_E<1>1
+    SLICE_X29Y100.B2        net (fanout=69)       1.677   CPU/dpath/ALU_rd2_E<1>
+    SLICE_X29Y100.B         Tilo                  0.094   CPU/dpath/ALUCompute/Out<10>_bdd42
+                                                          CPU/dpath/ALUCompute/Out<10>241
+    SLICE_X28Y97.D1         net (fanout=9)        1.064   CPU/dpath/ALUCompute/Out<10>_bdd47
+    SLICE_X28Y97.D          Tilo                  0.094   CPU/dpath/ALUCompute/Out<10>_bdd34
+                                                          CPU/dpath/ALUCompute/Out<10>181
+    SLICE_X29Y94.A1         net (fanout=2)        1.166   CPU/dpath/ALUCompute/Out<10>_bdd34
+    SLICE_X29Y94.A          Tilo                  0.094   CPU/dpath/ALU_result_E<10>50
+                                                          CPU/dpath/ALU_result_E<10>115
+    SLICE_X29Y94.C5         net (fanout=1)        0.356   CPU/dpath/ALU_result_E<10>115
+    SLICE_X29Y94.CMUX       Tilo                  0.392   CPU/dpath/ALU_result_E<10>50
+                                                          CPU/dpath/ALU_result_E<10>166_G
+                                                          CPU/dpath/ALU_result_E<10>166
+    SLICE_X23Y94.C6         net (fanout=1)        0.578   CPU/dpath/ALU_result_E<10>166
+    SLICE_X23Y94.C          Tilo                  0.094   CPU/dpath/ALU_result_M<10>
+                                                          CPU/dpath/ALU_result_E<10>302
+    SLICE_X23Y92.D3         net (fanout=1)        0.590   CPU/dpath/ALU_result_E<10>
+    SLICE_X23Y92.D          Tilo                  0.094   CPU/dpath/next_PC_F<10>
+                                                          CPU/dpath/next_PC_E<10>
+    SLICE_X23Y92.C6         net (fanout=9)        0.154   CPU/BiosAddr<10>
+    SLICE_X23Y92.C          Tilo                  0.094   CPU/dpath/next_PC_F<10>
+                                                          CPU/dpath/InstrAddr_O<10>1
+    RAMB36_X2Y15.ADDRBL11   net (fanout=32)       3.593   CPU/InstrAddr<10>
+    RAMB36_X2Y15.CLKBWRCLKL Trcck_ADDRB           0.347   CPU/instrMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP
+                                                          CPU/instrMem/BU2/U0/blk_mem_generator/valid.cstr/ramloop[3].ram.r/v5_init.ram/SDP.SINGLE_PRIM36.TDP
+    ----------------------------------------------------  ---------------------------
+    Total                                        19.352ns (3.953ns logic, 15.399ns route)
+                                                          (20.4% logic, 79.6% route)
+
+
+Derived Constraint Report
+Derived Constraints for TS_USER_CLK
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|                               |   Period    |       Actual Period       |      Timing Errors        |      Paths Analyzed       |
+|           Constraint          | Requirement |-------------+-------------|-------------+-------------|-------------+-------------|
+|                               |             |   Direct    | Derivative  |   Direct    | Derivative  |   Direct    | Derivative  |
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+|TS_USER_CLK                    |     10.000ns|      4.000ns|      9.949ns|            0|            0|            0|     73245958|
+| TS_cpu_clk                    |     20.000ns|     19.897ns|          N/A|            0|            0|     73245958|            0|
++-------------------------------+-------------+-------------+-------------+-------------+-------------+-------------+-------------+
+
+All constraints were met.
+
+
+Data Sheet report:
+-----------------
+All values displayed in nanoseconds (ns)
+
+Clock to Setup on destination clock AUDIO_BIT_CLK
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+AUDIO_BIT_CLK  |    5.758|         |         |         |
+---------------+---------+---------+---------+---------+
+
+Clock to Setup on destination clock USER_CLK
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+USER_CLK       |   19.897|         |         |         |
+---------------+---------+---------+---------+---------+
+
+
+Timing summary:
+---------------
+
+Timing errors: 0  Score: 0  (Setup/Max: 0, Hold: 0)
+
+Constraints cover 73248214 paths, 0 nets, and 12130 connections
+
+Design statistics:
+   Minimum period:  19.897ns{1}   (Maximum frequency:  50.259MHz)
+
+
+------------------------------------Footnotes-----------------------------------
+1)  The minimum period statistic assumes all single cycle delays.
+
+Analysis completed Mon Nov 28 19:11:46 2016 
+--------------------------------------------------------------------------------
+
+Trace Settings:
+-------------------------
+Trace Settings 
+
+Peak Memory Usage: 648 MB
+

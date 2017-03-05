@@ -1,0 +1,8 @@
+*.toc
+*.out
+*.log
+*.aux
+*.odg
+_minted-spec/
+*.pyg
+*.synctex.gz
