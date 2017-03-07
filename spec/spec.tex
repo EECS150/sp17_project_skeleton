@@ -65,7 +65,7 @@ Version \projectSpecVersion
 
 \section{Introduction}
 
-The primary goal of this project is to familiarize EECS151/251A students with the methods and tools of digital design.  In teams of 2, you will design and implement a complete 3-stage pipelined version of a RISC-V CPU. In addition to this, you will create a audio (AC97) controller that can stream audio samples to the headphone jack on the FPGA board. A functional implementation will be your primary goal.  To better expose you to real design decisions and tradeoffs, however, we are requiring that you optimize your design for cost (FPGA resource utilization) while attaining a specified minimum clock frequency.
+The primary goal of this project is to familiarize EECS151/251A students with the methods and tools of digital design.  In teams of 2, you will design and implement a complete 3-stage pipelined version of a RISC-V CPU. In addition to this, you will create a audio (AC97) controller that can stream audio samples to the headphone jack on the FPGA board. A functional implementation will be your primary goal.  To better expose you to real design decisions and tradeoffs, however, we are requiring that you optimize your design for cost (FPGA resource utilization) and performance (maximizing the Iron Law).
 
 You will use Verilog to implement this system, targeting the Xilinx XUPv5 platform (based around the Virtex 5 LX110T FPGA on the ML505 evaluation board). The project will give you experience designing with RTL descriptions, resolving hazards in a simple pipeline, building interfaces, and teach you how to approach system-level optimization.
 
@@ -88,7 +88,7 @@ There is the opportunity to extend our framework with additional functionality f
 The following is a brief description of each checkpoint and approximately how many weeks will be alloted to each one. This schedule may change as the semester progresses.
 
 \begin{itemize}
-	\item \textbf{\labFiveDueDate} - Finish Lab 5 (UART) and begin Lab 6 (AC97 Controller).
+	\item \textbf{\labFiveDueDate} - Finish Lab 5 (AC97 Controller) and begin Lab 6 (UART Piano).
 	
 	\item \textbf{\labSixDueDate} - Checkoffs for Lab 6. 
 	
@@ -97,6 +97,8 @@ The following is a brief description of each checkpoint and approximately how ma
 	\item \textbf{\baseCPUDueDate \space - \baseCPUTaskName \space (\baseCPUTimeAlloted)} - Implement your RISC-V processor core in Verilog and write tests to verify the accuracy of your implementation.
 
 	\item \textbf{\audioDueDate \space - \audioTaskName \space (\audioTimeAlloted)} - Implement the audio (AC97) controller. Map user inputs into the processor address space and design a standard and clock-crossing FIFO.
+	
+	\item \textbf{\ethernetDueDate \space - \ethernetTaskName \space (\ethernetTimeAlloted)} - Implement checkpoint 3 functionality (I2C master, video controller, TBA). 
 	
 	\item \textbf{\finalCheckoffDueDate \space - Final Checkoff} - Final processor optimization and checkoff. Project report due.
 \end{itemize}
@@ -157,46 +159,80 @@ These commands will delete the skeleton repository you cloned, clone your reposi
 Note that if you haven’t emailed your GSI with your group information (names and Github logins) you will not have a Git repository to save your work in so do that ASAP.
 
 \subsection{Integrate Designs from Lab}
-Here are some commands to add a modules from a previous lab to your git repository. Make sure to first change into the \verb|hardware/src| directory of the skeleton files in your repo.
+Here are some commands to add a modules from a previous lab to your git repository.
 
 \begin{minted}[tabsize=2]{bash}
-	cp ~/labs/lab5/src/UATransmit.v .
-	git add UATransmit.v
-	git commit -m "Adding UART transmit module"
+	cd sp17_project_skeleton/hardware/src/audio/.
+	cp ~/labs_sp17/lab5/src/ac97_controller.v .
+	git add ac97_controller.v
+	git commit -m "Adding AC97 controller from lab"
 	git push
 \end{minted}
-
-\textbf{The only files you should copy from lab5/lab6 are the synchronizer, debouncer, edge\_detector, rotary\_decoder, and UATransmit}. In later checkpoints, you will copy other lab designs over to your project.
 
 The \verb|git add| command tells your local git repository to add the file \verb|UATransmit.v| to the list of tracked files or stage it for the next commit. The \verb|git commit| command tells your local repository to actually commit any of the files you added and create a new change set with the changes in the files you added. Finally the \verb|git push| command sends your new local commit to the remote repository so that you or your partner can pull it later.
 
 Going forward, any update to project files will be made through the \verb|sp17_project_skeleton| repository. If you have followed the setup described here, then you can just do a \verb|git pull staff master|, and the latest changes will be fetched and automatically merged in.
 
-\subsection{Relevant Files and Scripts}
-To only \textbf{synthesize} your design, go to the \verb|hardware/| directory and run \verb|make synth|. To \textbf{build} your entire design run \verb|make|. To \textbf{program} the FPGA, run \verb|make impact| from this same directory. To \textbf{simulate} your design, go to the \verb|hardware/| directory and run \verb|make sim|.
+\textbf{Here are the files you should copy over from previous labs:}
 
-The following are located in the \verb|hardware/src/| directory:
+\begin{minted}{bash}
+cp labs_sp17/lab5/src/ac97_controller.v sp17_project_skeleton/hardware/src/audio/.
+cp labs_sp17/lab5/src/tone_generator.v sp17_project_skeleton/hardware/src/audio/.
+
+cp labs_sp17/lab5/src/debouncer.v sp17_project_skeleton/hardware/src/io_circuits/.
+cp labs_sp17/lab5/src/synchronizer.v sp17_project_skeleton/hardware/src/io_circuits/.
+cp labs_sp17/lab5/src/edge_detector.v sp17_project_skeleton/hardware/src/io_circuits/.
+cp labs_sp17/lab5/src/rotary_decoder.v sp17_project_skeleton/hardware/src/io_circuits/.
+
+cp labs_sp17/lab6/src/fifo.v sp17_project_skeleton/hardware/src/io_circuits/.
+cp labs_sp17/lab6/src/async_fifo.v sp17_project_skeleton/hardware/src/io_circuits/.
+cp labs_sp17/lab6/src/uart.v sp17_project_skeleton/hardware/src/io_circuits/.	
+cp labs_sp17/lab6/src/uart_receiver.v sp17_project_skeleton/hardware/src/io_circuits/.
+cp labs_sp17/lab6/src/uart_transmitter.v sp17_project_skeleton/hardware/src/io_circuits/.
+\end{minted}
+
+We have provided an organization structure for the \verb|hardware/src| folder, but you are free to change it as you please. We only ask that you leave the \verb|testbenches| and \verb|memories| folder in place to accommodate future staff repo merges.
+
+\subsection{Relevant Files and Scripts}
+To only \textbf{synthesize} your design, go to the \verb|hardware/| directory and run \verb|make synth|. To \textbf{build} your entire design run \verb|make|. To \textbf{program} the FPGA, run \verb|make impact| from this same directory. To \textbf{simulate} your design, go to the \verb|hardware/| directory and run \verb|make sim|. To run a specific testbench, you can run \verb|make CASES=tests/fifo_testbench.do| in the \verb|hardware/sim| directory.
+
+The following are located in the \verb|hardware/src| directory:
 \begin{itemize}
 	\item \verb|ml505top.v|: Top level file. Your Riscv151 CPU module is instantiated here. You should not need to modify this, but looking at this file can be helpful for understand what's going on.
 	\item \verb|ml505top.ucf|: Constraints file. This specifies constraints for the synthesis tools. You should not need to modify this.
+\end{itemize}
+
+In \verb|hardware/src/riscv_core|:
+\begin{itemize}
 	\item \verb|Riscv151.v|: All of your CPU datapath and control should be contained in this file.
-	\item \verb|UART.v, UATransmit.v, UAReceive.v|: Your working solution from Lab 5
 	\item \verb|RegFile.v|: Your register file implementation
+\end{itemize}
+
+In \verb|hardware/src/memories|:
+\begin{itemize}
 	\item \verb|imem_blk_ram|: Contains the block RAM you will use for your instruction memory. Make sure to copy over the bios151v3.coe file and run the build script to generate the Verilog file.
 	\item \verb|dmem_blk_ram|: Contains the block RAM you will use for your data memory. Make sure to copy over the bios151v3.coe file and run the build script to generate the Verilog file.
 	\item \verb|bios_mem|: Contains the block RAM you will use for your BIOS memory. Make sure to copy over the bios151v3.coe file and run the build script to generate the Verilog file.
-	\item \verb|EchoTestbench.v|: Basic testbench for your CPU. Use this as an example and create others. It implements the echo FSM from lab 5 using software executed by your processor.
+\end{itemize}
+
+In \verb|hardware/src/io_circuits|:
+\begin{itemize}
+	\item \verb|uart.v, uart_transmitter.v, uart_receiver.v|: Your working solution from Lab 4
+\end{itemize}
+
+In \verb|hardware/src/testbenches|:
+\begin{itemize}
+	\item \verb|echo_testbench.v|: Basic testbench for your CPU. Use this as an example and create others. It implements the echo FSM from lab 4 using software executed by your processor.
 \end{itemize}
 
 The following are located in \verb|software/| directory. To compile the C code, go into one of the directories and run \verb|make|:
 \begin{itemize}
- \item \verb|bios151v3|: This directory contains the BIOS, which will allow us to interact with our CPU via the serial UART. Make sure to compile it and copy over the \verb|.coe| file to the two block ram directories.
- \item \verb|echo|: This directory contains the software necessary to run the echo program, which behaves exactly like in Lab 5.
- \item \verb|assembly_tests|: Use this as a template to write assembly tests for your processor designed to run in simulation.
- \item \verb|asmtest|: Use this as a template to write assembly tests for your processor to execute on the FPGA.
- \item \verb|example|: Use this as an example to write C programs.
- \item \verb|mmult|: This is a program to be run on the FPGA for Checkpoint 1. It generates 2 6x6 matrices and multiplies them. Then it returns a checksum to verify the correct result.
- \item \verb|ac97_basic_test|: This is a program to be run on the FPGA for Checkpoint 2.
+	\item \verb|bios151v3|: This directory contains the BIOS, which will allow us to interact with our CPU via the serial UART. Make sure to compile it and copy over the \verb|.coe| file to the two block ram directories.
+	\item \verb|echo|: This directory contains the software necessary to run the echo program, which behaves exactly like in Lab 4.
+	\item \verb|assembly_tests|: Use this as a template to write assembly tests for your processor designed to run in simulation.
+	\item \verb|c_example|: Use this as an example to write C programs.
+	\item \verb|mmult|: This is a program to be run on the FPGA for Checkpoint 1. It generates 2 6x6 matrices and multiplies them. Then it returns a checksum to verify the correct result.
+	\item \verb|ac97_basic_test|: This is a program to be run on the FPGA for Checkpoint 2.
 \end{itemize}
 
 \subsection{RISC-V 151 ISA}
