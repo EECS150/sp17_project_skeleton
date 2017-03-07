@@ -50,6 +50,15 @@ module ml505top # (
     input FPGA_SERIAL_RX,
     output FPGA_SERIAL_TX
 );
+    // Remove these lines when implementing checkpoint 2.
+    assign PIEZO_SPEAKER = 1'b0;
+    assign GPIO_LED = 8'b0;
+    assign GPIO_LED_C = 1'b0;
+    assign GPIO_LED_N = 1'b0;
+    assign GPIO_LED_E = 1'b0;
+    assign GPIO_LED_W = 1'b0;
+    assign GPIO_LED_S = 1'b0;
+
     //// Clocking
     wire user_clk_g, cpu_clk, cpu_clk_g, pll_lock;
 
