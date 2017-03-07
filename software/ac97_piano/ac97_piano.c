@@ -2,6 +2,7 @@
 #include "uart.h"
 #include "string.h"
 #include "ascii.h"
+#include "memory_map.h"
 
 #define BUFFER_LEN 128
 
@@ -156,7 +157,8 @@ int main() {
     int next_sample = 0;
     int8_t buffer[BUFFER_LEN];
     while (1) {
-        if (uart_control & 0x02) {
+       AC97_VOLUME = DIP_SWITCHES & 0xF; 
+       if (uart_control & 0x02) {
             int c = uart_rx;
             if (c == '`') {
                 return 0;
