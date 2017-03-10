@@ -875,14 +875,14 @@ Just like in the labs, you can debug your logic by looking at waveforms. After r
 In \verb|echo_testbench.do| you will see lines that look like this:
 \begin{minted}[tabsize=2]{tcl}
 	file copy -force ../../../software/echo/echo.mif imem_blk_ram.mif
-	add wave EchoTestbench/*
-	add wave EchoTestbench/CPU/*
+	add wave echo_testbench/*
+	add wave echo_testbench/CPU/*
 \end{minted}
 
-The first line initializes the contents of \verb|imem_blk_ram| to whatever values you have in \verb|echo.mif|. The \verb|.mif| files are generated when you compile software from the \verb|software| folder, and they describe the initial values in a block RAM for ModelSim. You can change the filepath to point to a different \verb|.mif| file, and you can specify different memories you want to initialize. The second line tells Modelsim to collect data for all the signals in the top level of \verb|EchoTestbench|. The third line tells it to also get data for all signals \textbf{inside} the CPU, assuming you instantiated your CPU inside \verb|EchoTestbench.v| and called it \verb|CPU|. You could also add a line like:
+The first line initializes the contents of \verb|imem_blk_ram| to whatever values you have in \verb|echo.mif|. The \verb|.mif| files are generated when you compile software from the \verb|software| folder, and they describe the initial values in a block RAM for ModelSim. You can change the filepath to point to a different \verb|.mif| file, and you can specify different memories you want to initialize. The second line tells Modelsim to collect data for all the signals in the top level of \verb|echo_testbench|. The third line tells it to also get data for all signals \textbf{inside} the CPU, assuming you instantiated your CPU inside \verb|echo_testnench.v| and called it \verb|CPU|. You could also add a line like:
 
 \begin{minted}[tabsize=2]{tcl}
-	add wave EchoTestbench/CPU/mySubModule/*
+	add wave echo_testbench/CPU/mySubModule/*
 \end{minted}
 
 which would allow you to see all signals inside a submodule called \verb|mySubModule| in the CPU. Note that the name \verb|mySubModule| should correspond to the unique name which you instantiated that submodule with (i.e. if you instantiated a UART called \verb|myUART|, you want to use \verb|myUART|). In this way, you can add all of the signals you want to inspect to your waveform viewer for debugging.
@@ -1058,7 +1058,7 @@ It might seem overwhelming to implement all the functionality that your processo
 	
 	\item \textbf{Add cycle counters.} Begin to add the memory mapped IO components, by first adding the cycle and instruction counters. These are just 2 32-bit registers that your CPU should update on every cycle and every instruction respectively. Write tests to verify that your counters can be reset with a SW instruction, and can be read from using a LW instruction.
 	
-	\item \textbf{Integrate UART.} Add the UART to the memory stage, in parallel with the data, instruction, and BIOS memories. Detect when an instruction is accessing the UART and route the data to the UART accordingly. Make sure that you are setting the UART ready/valid control signals properly as you are feeding or retrieving data from it. This part can be tricky, ask a TA for a full explanation of how a program would communicate with the UART. We have provided you with the \verb|EchoTestbench| which performs a test of the UART. You should extend this testbench with more comprehensive tests, as many bugs can be traced to a faulty UART integration.
+	\item \textbf{Integrate UART.} Add the UART to the memory stage, in parallel with the data, instruction, and BIOS memories. Detect when an instruction is accessing the UART and route the data to the UART accordingly. Make sure that you are setting the UART ready/valid control signals properly as you are feeding or retrieving data from it. This part can be tricky, ask a TA for a full explanation of how a program would communicate with the UART. We have provided you with the \verb|echo_testbench| which performs a test of the UART. You should extend this testbench with more comprehensive tests, as many bugs can be traced to a faulty UART integration.
 	
 	\item \textbf{Run the BIOS.} If everything so far has gone well, you can try making the CPU with instantiating the BIOS memory with the BIOS program. Impact the CPU on the board and verify that the BIOS performs as expected. As a precursor to this step, you might try to make the CPU with instantiating the BIOS memory with the echo program, since it is a smaller and easier to analyze program.
 	
