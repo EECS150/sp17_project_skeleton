@@ -1,4 +1,5 @@
+# Master Makefile dependencies
 TARGET := bios151v3
+INCLUDE_LIB := true
 
-#include ../Makefile.llvm.in
- include ../Makefile.gcc.in
+include ../Makefile.gcc.in

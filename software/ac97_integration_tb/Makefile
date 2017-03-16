@@ -1,4 +1,5 @@
+# Master Makefile dependencies
 TARGET := ac97_integration_tb
+INCLUDE_LIB := false
 
-#include ../Makefile.llvm.in
- include ../Makefile.gcc.in
+include ../Makefile.gcc.in
