@@ -1294,7 +1294,7 @@ An integration testbench has been provided in \verb|/hardware/src/testbenches/ac
 
 This testbench performs an end-to-end check of your AC97 controller, the CPU's AC97 FIFO memory map, and the async FIFO. It verifies that all parts of your system can successfully communicate with each other and pass data along. If you look at the software, you will see that the testbench involves sending the PCM samples -50, -49, ..., 49, 50 to the async FIFO, which should then be read and transmitted to the codec by the AC97 controller.
 
-To run this testbench, you will have to modify the instantiations in the Verilog file to match your CPU's port declaration. You only need to connect the ports that your CPU needs to communicate with the async FIFO (\verb|wr_en|, \verb|full|, and \verb|din|) and the AC97 controller (\verb|volume_control|). Run this testbench as usual with \verb|make sim|.
+You can run this testbench as usual with \verb|make sim|. This testbench instantiates \verb|ml505top| so you need to have your AC97 controller, AC97 async sample FIFO, and RISC-V core properly hooked up at the top-level.
 
 To interpret the output, view the waveform and plot Slot 3 and Slot 4 of the codec model. Verify that the CPU wrote all the PCM samples to the async FIFO and that the AC97 controller pulled out every sample from the async FIFO and sent it to the codec. Make sure that you verify that the FIFO is empty as soon as PCM sample 50 is pulled from the FIFO, and that once the FIFO is empty, the AC97 controller keeps replaying the last sample that it fetched from the FIFO (50).
 
