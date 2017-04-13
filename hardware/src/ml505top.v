@@ -60,13 +60,24 @@ module ml505top # (
     assign GPIO_LED_S = 1'b0;
 
     //// Clocking
-    wire user_clk_g, cpu_clk, cpu_clk_g, pll_lock;
+    wire user_clk_g, cpu_clk, cpu_clk_g, cpu_clk_pll_lock;
+    wire cpu_clk_pll_fb;
 
+    //// Resets
+    // The global system reset is asserted when the CPU_RESET button is
+    // pressed by the user or when the PLL isn't locked
+    wire reset_button, reset;
+    assign reset = reset_button || ~cpu_clk_pll_lock;
+
+    //// User IO
+    wire [4:0] compass_buttons;
+    wire rotary_push, rotary_event, rotary_left;
+ 
     // The clocks need to be buffered before they can be used
     IBUFG user_clk_buf ( .I(USER_CLK), .O(user_clk_g) );
     BUFG  cpu_clk_buf  ( .I(cpu_clk),  .O(cpu_clk_g)  );
 
-    /* The PLL that generates all the clocks used in this design
+    /* The PLL that generates the CPU clock 
     * The global mult/divide ratio is set to 6. The input clk is 100MHz.
     * Therefore, freq of each output = 600MHz / CLKOUTx_DIVIDE
     */
@@ -82,17 +93,13 @@ module ml505top # (
         .CLKOUT0_DUTY_CYCLE(0.5),
         .CLKOUT0_PHASE(0.0)
     ) user_clk_pll (
-        .CLKFBOUT(pll_fb),
+        .CLKFBOUT(cpu_clk_pll_fb),
         .CLKOUT0(cpu_clk),      // This is our CPU clock (default 50 Mhz)
-        .LOCKED(pll_lock),
-        .CLKFBIN(pll_fb),
+        .LOCKED(cpu_clk_pll_lock),
+        .CLKFBIN(cpu_clk_pll_fb),
         .CLKIN(user_clk_g),
         .RST(1'b0)
     );
-
-    // User IO
-    wire [4:0] compass_buttons;
-    wire rotary_push, reset, rotary_event, rotary_left;
 
     button_parser #(
         .width(7),
@@ -101,7 +108,7 @@ module ml505top # (
     ) b_parser (
         .clk(cpu_clk_g),
         .in({FPGA_ROTARY_PUSH, GPIO_BUTTONS, ~FPGA_CPU_RESET_B}),
-        .out({rotary_push, compass_buttons, reset})
+        .out({rotary_push, compass_buttons, reset_button})
     );
 
     rotary_parser #(
