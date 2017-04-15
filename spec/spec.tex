@@ -1564,15 +1564,15 @@ We will be using 1024 x 768 at a 60 Hz refresh rate. This will require us to hav
 			\toprule
 			\textbf{Name} & \textbf{Pixel/Line Length} & \textbf{Real Time}\\
 			\midrule
-				  Sync Pulse    &  AE8 & LVCMOS33 \\
-				  Back Porch    &   AM12 & LVCMOS33 \\
-				  Visible Area    &   AK6 & LVCMOS33 \\
-				  Front Porch    &   AM11 & LVCMOS33 \\
+				  H Sync Pulse    &  136 & 2.09 us \\
+				  H Back Porch    &   160 & 2.46 us \\
+				  H Visible Area    &   1024 & 15.7 us \\
+				  H Front Porch    &   24 & 0.37 us \\
 			\midrule
-				  DVI\_DE        &        AE8 & LVCMOS33 \\
-				  DVI\_H         &        AM12 & LVCMOS33 \\
-				  DVI\_RESET\_B  &         AK6 & LVCMOS33 \\
-				  DVI\_V         &        AM11 & LVCMOS33 \\
+				  V Sync Pulse    &  6 & 124 us \\
+				  V Back Porch    &   29 & 600 us \\
+				  V Visible Area    &   768 & 15.9 ms \\
+				  V Front Porch    &   3 & 62 us \\
 		\end{tabular}
 	\end{center}
 \end{table}
