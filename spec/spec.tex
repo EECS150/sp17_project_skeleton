@@ -1354,7 +1354,263 @@ To finish this section, you will have to write a small C program (very similar t
 \pagebreak
 
 \section{Checkpoint 3 - I2C Master Controller + Video Controller}
+In checkpoint three of this project, you will implement a memory mapped I/O interface to a provided I2C master. This will give us access to all I2C devices on the FPGA, including the video controller. Writing to the video controller will allow us to display demo color bars on our VGA output.
+
+We will then build a controller module to handle the Chrontel CH7301C DVI Transmitter Device on our FPGA. This controller will supply the clock timing and logic, allowing us to produce images on our VGA output. We will also generate another block ram to serve as our frame buffer.
+ 
+Finally, we build a simple arbiter and a graphics accelerator that implements the Bresenham line algorithm. This dedicated hardware block will rapidly write to the frame buffer, bypassing the CPU. The arbiter will prioritize the accelerator writes over the CPU writes.
+ 
+Get started by pulling the latest skeleton files from the staff repository: \verb|git pull staff master|.
+
+\subsection{I2C}
+While you will not be implementing an I2C controller, it is helpful to have a brief understanding of I2C.\footnote{For more reading on I2C, see \url{"http://www.nxp.com/documents/user_manual/UM10204.pdf"}}
+
+\begin{figure}[hbt]
+\begin{center}
+	\includegraphics[width=4in]{I2C_example}
+	\caption{Example of a multi-master I2C configuration}
+	\label{fig:i2c_overview}
+\end{center}
+\end{figure}
+
+Inter IC or I2C is a simple bidirectional 2-wire serial bus designed by Philips Semiconductor and is a de facto international standard. Multiple devices can connect to the same bus and act as masters or slaves. Unlike the ready-valid interface that we have been using, I2C  reduces the physical complexity of the bus while maintaining flexibility and interoperability. 
+
+The two I2C wires are a data line SDA and a clock line SCL. Any master device may generate a clock and send data over these shared lines, and the data is free for any device to interpret. The intended slave device will have a specific address encoded, which is used to direct the transaction. The slave also sends acknowledgments back to the master after every byte of data to confirm integrity.
+
+Note that having a shared bus with multiple masters can lead to data collisions when multiple masters attempt to initiate transfers. This is handled in the I2C spec, but is beyond our discussion.
+
+In the simplest terms, an I2C transactions contains 3 steps. First, a given master addresses the slave on the line, and the slave acknowledges. The master then sends register read or write commands to the slave. Finally, the master terminates the transfer.
+
+\subsubsection{Provided I2C}
+A complete I2C controller is fairly complex to build, so we have provided you with a complete controller. It uses a set of ready-valid interfaces, which you should be intimately familiar with by now. 
+
+\verb|i2c_controller.v| takes the same 50MHz clock and reset as the CPU. \verb|i2c_divider| takes in a value for internal clock division; we will set it \verb|0x01F4| to get a 100KHz data rate. 
+
+This slave device, register address, read data, and write data are all normally 8 bits. However, in the provided controller, these register has 16 bits each in order to contain extra information. 
+The slave address register takes the address in the top 15 bits, and an active high write enable in the LSB. 
+The register address register and write data register take the address and data in the lower 8 bits, and the upper 8 bits are reserved for the write delay. The write delay sets an internal counter to delay the transaction, pending a response from an I2C device. 
+
+\begin{table}[hbt]
+	\begin{center}
+		\caption{I2C Controller Input Mapping}
+		\label{i2c_ctrl}
+		\begin{tabular}{l l l l}
+			\toprule
+			\textbf{Register} & \textbf{Function} & \textbf{Data Encoding}\\
+			\midrule
+			i2c\_divider & Clock Divider Setting & \{divisor\} \\
+			i2c\_slave\_addr\_unreg & Slave Device Address &  \{7'b0, slave address, active-low write enable\} \\
+			i2c\_reg\_addr\_unreg & Slave Register Address & \{write delay, register address\} \\
+			i2c\_wdata\_unreg & Register Write Data & \{8'h01, register data\} \\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+The software will be responsible for formatting the data as such. As with the UART, the CPU simply needs access to the registers, as described in the next section. This information is provided to help with testbenching.
+
+\subsubsection{Hookup I2C to User I/O}
+
+Here is the new memory map:
+\begin{table}[hbt]
+	\begin{center}
+		\caption{Updated Memory Map with I2C}
+		\label{i2c_mem_map}
+		\begin{tabular}{l l l l}
+			\toprule
+			\textbf{Address} & \textbf{Function} & \textbf{Access} & \textbf{Data Encoding}\\
+			\midrule
+			32'h80000100 & I2C status & Read & \{30'b0, i2c\_rdata\_valid, i2c\_ctrl\_ready\} \\
+			32'h80000104 & I2C register read data  & Read & \{24'b0, i2c\_rdata\} \\
+			32'h80000108 & I2C register address & Write & \{16'b0, i2c\_reg\_addr\} \\
+			32'h8000010c & I2C register write data & Write & \{16'b0, i2c\_wdata\} \\
+			32'h80000110 & I2C slave address & Write & \{16'b0, i2c\_slave\_addr\} \\
+			32'h80000114 & I2C register write trigger & Write & Executes I2C transaction \\
+			%\midrule
+		\end{tabular}
+	\end{center}
+\end{table}
+
+Each port of the I2C controller has its own memory mapped register. This will operate in a very similar to the CPU-UART interface. The major different is in the trigger register. The trigger register is responsible for starting an I2C transaction. All of the I2C registers can be written to, but only writes to this register initiates the transfer.
+% This tells the I2C controller that the data is valid, initializing the transaction.
+
+Modify \verb|Riscv151.v| to include these memory mapped registers, as you did with the UART.
+
+We will also have to modify \verb|ml505top.v| and the UCF to include the I2C lines. Be sure the following are added to your top module and the UCF. Otherwise, run \verb|git pull staff master|. 
+
+\begin{table}[hbt]
+	\begin{center}
+		\caption{Top Module Connections for I2C}
+		\label{i2c_ucf}
+		\begin{tabular}{l l l l}
+			\toprule
+			\textbf{Name} & \textbf{FPGA Loc} & \textbf{IO Standard}\\
+			\midrule
+			IIC\_SCL\_VIDEO & U27  & LVCMOS18 \\
+			IIC\_SDA\_VIDEO & T29 & LVCMOS18 \\
+			%\midrule
+		\end{tabular}
+	\end{center}
+\end{table}
+
+
+\subsubsection{I2C Testbench}
+To help you test, we have provided an I2C slave model. This model will print out information about the transaction times, slave address, device register, register data, transaction acknowledgement, etc. This will allow you to check your memory map and some timing operations.
+
+The provided I2C testbench attempts to manually read from and write to the I2C controller using the memory map. It can be found in \verb|software/i2c_integration_tb/|. Compile and run the program just as you did for the other testbenchs. This testbench allows you to check for any outstanding errors.
+
+
+
+\subsection{Frame Buffer}
+We will need a place store all of the pixel data for the image, a total of 786432 pixels. We will generate a 786432x1 block RAM, where each byte line stores a single pixel's data. Note that we will break from the previous convention of word alignment. To simplify the design, we will keep the RAM byte-aligned. Each byte will be either high or low, representing a light or dark pixel. The pixels will be ordered left to right, then top to bottom. This matches the VGA pixel order.
+
+The CPU will be able to write to the frame buffer in the same manner it does the DMEM. Thus we need to reserve an address space for it. To make space for all 786432 pixels, we will use reserve the spaces 0x90000000 through 0x900BFFFF for the memory.
+
+\begin{table}[hbt]
+	\begin{center}
+		\caption{Tone Generator Memory Map Additions}
+		\label{frame_buffer}
+		\begin{tabular}{l l l l}
+			\toprule
+			\textbf{Address} & \textbf{Function} & \textbf{Access} & \textbf{Data Encoding}\\
+			\midrule
+			32'h900XXXXX & Frame Buffer & Write & \{31'b0, data\} \\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\subsection{Chrontel Chip}
+The Chrontel CH7301C DVI Transmitter Device on our FPGA is a simple interface to output DVI display data. It includes bypass controls to allow VGA output, which is what we will use.
+
+\begin{figure}[hbt]
+\begin{center}
+	\includegraphics[width=6.5in]{dvi_block}
+	\caption{Chrontel Transmitter Block Diagram}
+	\label{fig:dvi_block}
+\end{center}
+\end{figure}
+
+
+\subsubsection{Control Registers}
+
+There are sequence of registers we need to set to activate the DVI device and begin transmission. These registers will be written over I2C. Below is a reduced list of our key registers. See the Chrontel datasheet for more detail. 
+
+\begin{table}[hbt]
+	\begin{center}
+		\caption{Chrontel Control Registers}
+		\label{chrontel_registers}
+		\begin{tabular}{l l l l}
+			\toprule
+			\textbf{Address} & \textbf{Function} & \textbf{Default} & \textbf{Desired} \\
+			\midrule
+			8'h21 & DAC Control & 8'h00 & 8'h09 \\
+			8'h33 & Charge Pump Control & 8'hE4 & 8'h08 \\
+			8'h34 & DVI PLL Divider & 8'h16 & 8'h16 \\
+			8'h36 & DVI PLL Filter & 8'h00 & 8'h60 \\
+			8'h48 & Test Pattern & 8'h18 & 8'h19 \\
+			8'h49 & Power Management & 8'h01 & 8'hC0 \\
+			8'h56 & DVI Sync Polarity & 8'h00 & 8'h00 \\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+These registers will be set via the I2C software. The slave device address for the Chrontel device is 0x76.
+
+\subsubsection{Hookup}
+
+As with the AC97 device, we have to add the DVI device to the top module. Be sure the following are added to your top module and the UCF. Otherwise, run \verb|git pull staff master|. 
+
+v
+
+
+\subsection{VGA}
+Since we are using the VGA bypass on the Chrontel device, we have to generate the necessary signals for VGA. Thus we must understand the VGA protocol.
+
+\subsubsection{Timing}
+
+\begin{figure}[hbt]
+\begin{center}
+	\includegraphics[width=4in]{vga_overview}
+	\caption{VGA timing scheme}
+	\label{fig:vga_overview}
+\end{center}
+\end{figure}
+
+The VGA protocol uses a strict clock synchronization protocol to draw each pixel on screen from left to right, then top to bottom. It uses two synchronization signals: a horizontal sync and a vertical sync. The vertical sync signal denotes the beginning of a image, or frame. The horizontal sync signal denotes the beginning of each horizontal line of pixels. Both signals are active low.
+
+For each sync signals, there are 4 major components: the sync pulse, the back porch immediately following, the display active time, and the front porch before the next sync signal. Only during the display active time do we want to be sending valid data to be displayed.
+
+\begin{figure}
+\begin{center}
+	\includegraphics[width=4in]{vga_timing}
+	\caption{VGA timing detailed}
+	\label{fig:vga_timing}
+	
+	\includegraphics[width=4in]{vga_frame}
+	\caption{VGA frame with timing}
+	\label{fig:vga_frame}
+\end{center}
+\end{figure}
+
+Note that during the vertical sync pulse, the horizontal sync pulse should be inactive as to not denote the start of a line.
+
+\subsubsection{Parameters}
+We will be using 1024 x 768 at a 60 Hz refresh rate. This will require us to have 65 MHz clock and the following timing parameters.
+
+\begin{table}[hbt]
+	\begin{center}
+		\caption{VGA Timing for 1024 x 768 at 60 Hz (XGA)}
+		\label{vga_timing_table}
+		\begin{tabular}{l l l l}
+			\toprule
+			\textbf{Name} & \textbf{Pixel/Line Length} & \textbf{Real Time}\\
+			\midrule
+				  Sync Pulse    &  AE8 & LVCMOS33 \\
+				  Back Porch    &   AM12 & LVCMOS33 \\
+				  Visible Area    &   AK6 & LVCMOS33 \\
+				  Front Porch    &   AM11 & LVCMOS33 \\
+			\midrule
+				  DVI\_DE        &        AE8 & LVCMOS33 \\
+				  DVI\_H         &        AM12 & LVCMOS33 \\
+				  DVI\_RESET\_B  &         AK6 & LVCMOS33 \\
+				  DVI\_V         &        AM11 & LVCMOS33 \\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+We will be using one-bit color: either black or "white". We will tint our "white" a slight blue. This implementation is fairly simple expand to 3-color RGB and to multi-bit RGB, with 5-bits of color each. This is not a requirement of the project, but you are welcome to try it for extra credit.
+
+\subsection{DVI Testbench}
+
+
+\subsection{Graphics Hardware Acceleration}
 Coming soon!
+
+\subsubsection{Line Drawing}
+Coming soon!
+
+
+\subsubsection{Arbiter}
+Coming soon!
+
+\subsubsection{Hookup}
+Coming soon!
+
+
+\subsection{Graphics Software}
+Coming soon!
+
+
+\subsection{Checkpoint 3 Deliverables Summary}
+
+\begin{center}
+	\begin{tabular}{m{30mm} m{35mm} m{70mm}}
+		\toprule
+		\textbf{Deliverable} & \textbf{Due Date} & \textbf{Description} \\
+		\midrule
+		I2C memory map + VGA controller + line drawing accelerator & \audioDueDate - Checkoff time in the evening TBA & Demonstrate a working VGA color bar test. Demonstrate line or image drawing from both the CPU and the accelerator \\
+		\bottomrule
+	\end{tabular}
+\end{center}
 
 \pagebreak
 
