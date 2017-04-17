@@ -1375,7 +1375,7 @@ While you will not be implementing an I2C controller, it is helpful to have a br
 
 Inter IC or I2C is a simple bidirectional 2-wire serial bus designed by Philips Semiconductor and is a de facto international standard. Multiple devices can connect to the same bus and act as masters or slaves. Unlike the ready-valid interface that we have been using, I2C  reduces the physical complexity of the bus while maintaining flexibility and interoperability. 
 
-The two I2C wires are a data line SDA and a clock line SCL. Any master device may generate a clock and send data over these shared lines, and the data is free for any device to interpret. The intended slave device will have a specific address encoded, which is used to direct the transaction. The slave also sends acknowledgments back to the master after every byte of data to confirm integrity.
+The two I2C wires are a data line \verb|SDA| and a clock line \verb|SCL|. Any master device may generate a clock and send data over these shared lines, and the data is free for any device to interpret. The intended slave device will have a specific address encoded, which is used to direct the transaction. The slave also sends acknowledgments back to the master after every byte of data to confirm integrity.
 
 Note that having a shared bus with multiple masters can lead to data collisions when multiple masters attempt to initiate transfers. This is handled in the I2C spec, but is beyond our discussion.
 
@@ -1384,34 +1384,38 @@ In the simplest terms, an I2C transactions contains 3 steps. First, a given mast
 \subsubsection{Provided I2C}
 A complete I2C controller is fairly complex to build, so we have provided you with a complete controller. It uses a set of ready-valid interfaces, which you should be intimately familiar with by now. 
 
-\verb|i2c_controller.v| takes the same 50MHz clock and reset as the CPU. \verb|i2c_divider| takes in a value for internal clock division; we will set it \verb|0x01F4| to get a 100KHz data rate. 
+The I2C controller in \verb|hardware/src/video/i2c_controller.v| takes the same 50 MHz clock and reset as the CPU. \verb|i2c_divider| takes in a value to internally divide the 50 Mhz clock to the frequency of \verb|SCL|; we will tie it \verb|0x01F4| to get a 100KHz data rate.
 
-This slave device, register address, read data, and write data are all normally 8 bits. However, in the provided controller, these register has 16 bits each in order to contain extra information. 
-The slave address register takes the address in the top 15 bits, and an active high write enable in the LSB. 
-The register address register and write data register take the address and data in the lower 8 bits, and the upper 8 bits are reserved for the write delay. The write delay sets an internal counter to delay the transaction, pending a response from an I2C device. 
+The slave device is normally 7 bits, and the register address, read data, and write data are all normally 8 bits. However, in the provided controller, these registers are 16 bits each in order to pass extra information to the I2C controller. 
+
+%The slave address register takes the address in the top 15 bits, and an active high write enable in the LSB. 
+%The register address register and write data register take the address and data in the lower 8 bits, and the upper 8 bits are reserved for the write delay. The write delay sets an internal counter to delay the transaction, pending a response from an I2C device. 
 
 \begin{table}[hbt]
 	\begin{center}
-		\caption{I2C Controller Input Mapping}
+		\caption{I2C Controller I/O Mapping}
 		\label{i2c_ctrl}
-		\begin{tabular}{l l l l}
+		\begin{tabular}{l l l}
 			\toprule
-			\textbf{Register} & \textbf{Function} & \textbf{Data Encoding}\\
+			\textbf{Signal} & \textbf{Function} & \textbf{Data Encoding}\\
 			\midrule
 			i2c\_divider & Clock Divider Setting & \{divisor\} \\
-			i2c\_slave\_addr\_unreg & Slave Device Address &  \{7'b0, slave address, active-low write enable\} \\
-			i2c\_reg\_addr\_unreg & Slave Register Address & \{write delay, register address\} \\
-			i2c\_wdata\_unreg & Register Write Data & \{8'h01, register data\} \\
+			i2c\_slave\_addr\_unreg & Slave Device Address &  \{8'b0, slave address[6:0], active-low write enable\} \\
+			i2c\_reg\_addr\_unreg & Slave Register Address & \{num\_bytes[7:0], register address[7:0]\} \\
+			i2c\_wdata\_unreg & Register Write Data & \{num\_bytes[7:0], register write data[7:0]\} \\
+			i2c\_rdata & Register Read Data & {8'b0, register read data[7:0]} \\
+			i2c\_rdata\_ready, i2c\_rdata\_valid & ready-valid for read data &  \\
+			i2c\_ctrl\_ready, i2c\_ctrl\_valid & ready-valid for controller 
 		\end{tabular}
 	\end{center}
 \end{table}
 
-The software will be responsible for formatting the data as such. As with the UART, the CPU simply needs access to the registers, as described in the next section. This information is provided to help with testbenching.
+The software will take care of writing the correct data to each register. As with the UART, the CPU simply needs access to the registers, as described in the next section. This information is provided to help with testing.
 
-\subsubsection{Hookup I2C to User I/O}
+\subsubsection{Hookup I2C to Memory-Mapped I/O}
 
 Here is the new memory map:
-\begin{table}[hbt]
+\begin{table}[H]
 	\begin{center}
 		\caption{Updated Memory Map with I2C}
 		\label{i2c_mem_map}
@@ -1424,16 +1428,14 @@ Here is the new memory map:
 			32'h80000108 & I2C register address & Write & \{16'b0, i2c\_reg\_addr\} \\
 			32'h8000010c & I2C register write data & Write & \{16'b0, i2c\_wdata\} \\
 			32'h80000110 & I2C slave address & Write & \{16'b0, i2c\_slave\_addr\} \\
-			32'h80000114 & I2C register write trigger & Write & Executes I2C transaction \\
-			%\midrule
+			32'h80000114 & I2C controller trigger & Write & Executes I2C transaction
 		\end{tabular}
 	\end{center}
 \end{table}
 
-Each port of the I2C controller has its own memory mapped register. This will operate in a very similar to the CPU-UART interface. The major different is in the trigger register. The trigger register is responsible for starting an I2C transaction. All of the I2C registers can be written to, but only writes to this register initiates the transfer.
-% This tells the I2C controller that the data is valid, initializing the transaction.
+You need to create registers in your CPU for \verb|i2c_reg_addr|, \verb|i2c_wdata|, and \verb|i2c_slave_addr|. You should pulse \verb|i2c_ctrl_valid| when a write is performed to the I2C control trigger address. You should pulse \verb|i2c_rdata_ready| when a read is performed from the I2C register read data address.
 
-Modify \verb|Riscv151.v| to include these memory mapped registers, as you did with the UART.
+Modify \verb|Riscv151.v| to include these memory mapped registers.
 
 We will also have to modify \verb|ml505top.v| and the UCF to include the I2C lines. Be sure the following are added to your top module and the UCF. Otherwise, run \verb|git pull staff master|. 
 
@@ -1441,24 +1443,44 @@ We will also have to modify \verb|ml505top.v| and the UCF to include the I2C lin
 	\begin{center}
 		\caption{Top Module Connections for I2C}
 		\label{i2c_ucf}
-		\begin{tabular}{l l l l}
+		\begin{tabular}{l l l}
 			\toprule
 			\textbf{Name} & \textbf{FPGA Loc} & \textbf{IO Standard}\\
 			\midrule
 			IIC\_SCL\_VIDEO & U27  & LVCMOS18 \\
-			IIC\_SDA\_VIDEO & T29 & LVCMOS18 \\
-			%\midrule
+			IIC\_SDA\_VIDEO & T29 & LVCMOS18 
 		\end{tabular}
 	\end{center}
 \end{table}
 
 
 \subsubsection{I2C Testbench}
-To help you test, we have provided an I2C slave model. This model will print out information about the transaction times, slave address, device register, register data, transaction acknowledgement, etc. This will allow you to check your memory map and some timing operations.
+To help you verify that the I2C controller is hooked up properly, we have provided an I2C slave model. This model will print out information about the transaction times, slave address, device register, register data, transaction acknowledgement, etc.
 
-The provided I2C testbench attempts to manually read from and write to the I2C controller using the memory map. It can be found in \verb|software/i2c_integration_tb/|. Compile and run the program just as you did for the other testbenchs. This testbench allows you to check for any outstanding errors.
+The testbench files are located in \verb|hardware/src/testbenches/i2c_integration_testbench.v|, \verb|hardware/sim/i2c_integration_testbench.do|, and \verb|software/i2c_integration_tb|.
 
+To run the testbench,
+\begin{enumerate}
+	\item Run \verb|make| in \verb|software/i2c_integration_tb|
+	\item Run \verb|make CASES=tests/i2c_integration_testbench.do| in \verb|hardware/sim|
+	\item Observe the testbench output; it should correspond to the transactions enumerated in the software. Specifically:
+	\begin{enumerate}
+		\item An I2C read from slave 0x76, reg 0x01
+		\item An I2C write to slave 0x76, reg 0x34, data 0xfa
+		\item an I2C write to slave 0x76, reg 0x85, data 0x39
+	\end{enumerate}
+	\item Verify in Modelsim that the I2C read ended with \verb|i2c_rdata| of 0xa5 and that your CPU pulsed \verb|i2c_rdata_ready| after \verb|i2c_rdata_valid| was asserted
+	\item Verify that the slave model saw the two I2C write commands as they were written in the software
+\end{enumerate}
 
+\subsubsection{I2C Testing on the FPGA}
+Once things work in simulation, \verb|make| and \verb|make impact| your design to the FPGA. Load the \verb|graphics| program in \verb|software/graphics| into your CPU using \verb|coe_to_serial| as usual, and \verb|jal| to it from the BIOS.
+
+When you see the \verb|graphics >| prompt, issue the command \verb|setup|. The program will attempt to perform I2C write commands to the Chrontel Video Chip to configure it properly. Looking at the \verb|graphics.c| file in \verb|software| you can see that it performs an I2C read after every I2C write and prints out the data it got in the \verb|i2c_setup()| function. You need to verify that the values that was read over I2C match the values that was written to the chip.
+
+As an additional check, at the end of the \verb|i2c_setup()| function, the Chrontel chip's Version and Device IDs are printed out. Look up those values in the Chrontel chip's datasheet (in \verb|useful_docs|) and verify that they match what was printed.
+
+If all these things look good, then your I2C controller is properly hooked up!
 
 \subsection{Frame Buffer}
 We will need a place store all of the pixel data for the image, a total of 786432 pixels. We will generate a 786432x1 block RAM, where each byte line stores a single pixel's data. Note that we will break from the previous convention of word alignment. To simplify the design, we will keep the RAM byte-aligned. Each byte will be either high or low, representing a light or dark pixel. The pixels will be ordered left to right, then top to bottom. This matches the VGA pixel order.
@@ -1487,7 +1509,7 @@ The Chrontel CH7301C DVI Transmitter Device on our FPGA is a simple interface to
 	\caption{Chrontel Transmitter Block Diagram}
 	\label{fig:dvi_block}
 \end{center}
-\end{figure}
+1\end{figure}
 
 
 \subsubsection{Control Registers}
