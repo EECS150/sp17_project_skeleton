@@ -1483,13 +1483,17 @@ As an additional check, at the end of the \verb|i2c_setup()| function, the Chron
 If all these things look good, then your I2C controller is properly hooked up!
 
 \subsection{Frame Buffer}
-We will need a place store all of the pixel data for the image, a total of 786432 pixels. We will generate a 786432x1 block RAM, where each byte line stores a single pixel's data. Note that we will break from the previous convention of word alignment. To simplify the design, we will keep the RAM byte-aligned. Each byte will be either high or low, representing a light or dark pixel. The pixels will be ordered left to right, then top to bottom. This matches the VGA pixel order.
+The video controller has to continuously send data to the Chrontel video chip: pixel by pixel. It needs a place from where to fetch this pixel data. Also, our CPU needs to be able to control whether a given pixel is on or off. The place we store this pixel data is called the frame buffer. We are targeting an output resolution of 1024 x 768, which gives us a total of 786432 pixels.
 
-The CPU will be able to write to the frame buffer in the same manner it does the DMEM. Thus we need to reserve an address space for it. To make space for all 786432 pixels, we will use reserve the spaces 0x90000000 through 0x900BFFFF for the memory.
+To that end, we will generate a 786432x1 block RAM, where each line stores a single pixel's data. We are only use 1 bit per pixel (i.e. black or white), in the interest of keeping the FPGA design small in area, and because we have a limited amount of memory on the FPGA.
+
+Each 1-bit line of this RAM will be assigned a byte address. Each byte will be either high or low, representing a light or dark pixel. The pixels will be ordered left to right, then top to bottom. This matches the VGA pixel order. 
+
+The CPU will be able to write to the frame buffer just like it writes to the data memory. Thus we need to reserve an address space for it. To make space for all 786432 pixels, we will reserve the addresses 0x90000000 through 0x900BFFFF for the frame buffer.
 
 \begin{table}[hbt]
 	\begin{center}
-		\caption{Tone Generator Memory Map Additions}
+		\caption{Framebuffer Memory Map Additions}
 		\label{frame_buffer}
 		\begin{tabular}{l l l l}
 			\toprule
@@ -1499,6 +1503,8 @@ The CPU will be able to write to the frame buffer in the same manner it does the
 		\end{tabular}
 	\end{center}
 \end{table}
+
+For (x, y) coordinates where $x \in {0, 1, ... 1023}$ and $y \in {0, 1, ..., 767}$ the memory address becomes \verb|0x90000000 + (y << 10) + x|. You can assume that all writes to the framebuffer will be in the form of \verb|sb| (store byte) instructions.
 
 \subsection{Chrontel Chip}
 The Chrontel CH7301C DVI Transmitter Device on our FPGA is a simple interface to output DVI display data. It includes bypass controls to allow VGA output, which is what we will use.
