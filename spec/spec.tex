@@ -1362,6 +1362,12 @@ Finally, we build a simple arbiter and a graphics accelerator that implements th
  
 Get started by pulling the latest skeleton files from the staff repository: \verb|git pull staff master|.
 
+Here is a block diagram of our entire FPGA design. You should recognize the parts you have already built. It will be helpful to refer back to this to see how things ought to integrate.
+
+\begin{figure}[H]
+	\includegraphics[width=\textwidth]{EECS151_Project_Block_Diagram.png}
+\end{figure}
+
 \subsection{I2C}
 While you will not be implementing an I2C controller, it is helpful to have a brief understanding of I2C.\footnote{For more reading on I2C, see \url{"http://www.nxp.com/documents/user_manual/UM10204.pdf"}}
 
@@ -1387,9 +1393,6 @@ A complete I2C controller is fairly complex to build, so we have provided you wi
 The I2C controller in \verb|hardware/src/video/i2c_controller.v| takes the same 50 MHz clock and reset as the CPU. \verb|i2c_divider| takes in a value to internally divide the 50 Mhz clock to the frequency of \verb|SCL|; we will tie it \verb|0x01F4| to get a 100KHz data rate.
 
 The slave device is normally 7 bits, and the register address, read data, and write data are all normally 8 bits. However, in the provided controller, these registers are 16 bits each in order to pass extra information to the I2C controller. 
-
-%The slave address register takes the address in the top 15 bits, and an active high write enable in the LSB. 
-%The register address register and write data register take the address and data in the lower 8 bits, and the upper 8 bits are reserved for the write delay. The write delay sets an internal counter to delay the transaction, pending a response from an I2C device. 
 
 \begin{table}[hbt]
 	\begin{center}
