@@ -1480,7 +1480,7 @@ To run the testbench,
 \subsubsection{I2C Testing on the FPGA}
 Once things work in simulation, \verb|make| and \verb|make impact| your design to the FPGA. Load the \verb|graphics| program in \verb|software/graphics| into your CPU using \verb|coe_to_serial| as usual, and \verb|jal| to it from the BIOS.
 
-When you see the \verb|graphics >| prompt, issue the command \verb|setup|. The program will attempt to perform I2C write commands to the Chrontel Video Chip to configure it properly. Looking at the \verb|graphics.c| file in \verb|software| you can see that it performs an I2C read after every I2C write and prints out the data it got in the \verb|i2c_setup()| function. You need to verify that the values that was read over I2C match the values that was written to the chip.
+When you see the \verb|graphics >| prompt, issue the command \verb|setup|. The program will attempt to perform I2C write commands to the Chrontel Video Chip to configure it properly. Looking at the \verb|graphics.c| file in \verb|software| you can see that it performs an I2C read after every I2C write and prints out the data it got in the \verb|i2c_setup()| function. You need to verify that the values that were read over I2C match the values that were written to the chip; the values are printed out.
 
 As an additional check, at the end of the \verb|i2c_setup()| function, the Chrontel chip's Version and Device IDs are printed out. Look up those values in the Chrontel chip's datasheet (in \verb|useful_docs|) and verify that they match what was printed.
 
@@ -1509,6 +1509,16 @@ The CPU will be able to write to the frame buffer just like it writes to the dat
 \end{table}
 
 For (x, y) coordinates where $x \in {0, 1, ... 1023}$ and $y \in {0, 1, ..., 767}$ the memory address becomes \verb|0x90000000 + (y << 10) + x|. You can assume that all writes to the framebuffer will be in the form of \verb|sb| (store byte) instructions.
+
+The framebuffer's block RAM needs to be built. To do this:
+\begin{enumerate}
+	\item Go to \verb|hardware/src/video/framebuffer_ram|
+	\item Run \verb|./build|
+	\item Open up \verb|block_mem_1x786432.v| and make sure you have a dual ported block RAM that was generated
+	\item The module you should instantiate wraps the block RAM and is located in\\ \verb|hardware/src/video/frame_buffer_1_786432.v|.
+\end{enumerate}
+
+You only need to do this once.
 
 \subsection{Chrontel Chip}
 The Chrontel CH7301C DVI Transmitter Device on the ML505 board can receive digital pixel data over a parallel bus from the FPGA, and it can output a DVI video signal to a monitor. It can also drive an analog VGA output when VGA-bypass mode is enabled. The datasheet for this chip can be found in the \verb|useful_docs| folder.
@@ -1539,13 +1549,12 @@ Just like the AC97 codec, the Chrontel video chip has many internal registers th
 			8'h48 & Test Pattern & 8'h18 & 8'h19 \\
 			8'h49 & Power Management & 8'h01 & 8'hC0 \\
 			8'h56 & DVI Sync Polarity & 8'h00 & 8'h00 \\
-			8'd1D & Input Clock Register & 8'h00 & 8'h0F \\
 			8'h1F & Input Data Format & 8'h00 & 8'h83 
 		\end{tabular}
 	\end{center}
 \end{table}
 
-These registers will be set via the \verb|graphics| program; it is all done for you. The slave device address for the Chrontel device is 0x76.
+These registers will be set via the \verb|graphics| program; it is all done for you. The slave device address for the Chrontel chip is 0x76.
 
 \subsubsection{Chrontel Chip I/O}
 The Chrontel chip takes several inputs that represent video data. Here is a list of relevant signals (they are all outputs from the FPGA and inputs to the chip):
@@ -1564,12 +1573,10 @@ The Chrontel chip takes several inputs that represent video data. Here is a list
 	\item \textbf{DVI\_DE} - Data enable input to the Chrontel chip. The \verb|DVI_D| bus' data is valid for the chip to latch when this signal is asserted \underline{active-high}.
 \end{itemize}
 
-All these signals are driven using the \verb|dvi_controller| located in \verb|src/video/dvi_controller.v|
-
-% specify the source file dvi_controller.v
+All these signals are driven using the \verb|dvi_controller| located in \verb|src/video/dvi_controller.v|. You will develop this module in this checkpoint.
 
 \subsection{Building the DVI Controller}
-Since we are using the VGA bypass on the Chrontel device, we have to generate the necessary signals for VGA. Thus we must understand the VGA protocol.
+To send video data to the Chrontel chip, we need to strobe the \verb|DVI_V|, \verb|DVI_H|, \verb|DVI_DE|, and \verb|DVI_D[11:0]| signals appropriately. The way to drive these signals comes from the VGA timing spec.
 
 \subsubsection{Timing}
 
