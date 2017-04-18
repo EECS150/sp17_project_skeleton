@@ -1366,6 +1366,7 @@ Here is a block diagram of our entire FPGA design. You should recognize the part
 
 \begin{figure}[H]
 	\includegraphics[width=\textwidth]{EECS151_Project_Block_Diagram.png}
+	\caption{Block Diagram of Entire EECS151 Project, dashed blue line indicates boundary of ml505top}
 \end{figure}
 
 \subsection{I2C}
@@ -1510,22 +1511,20 @@ The CPU will be able to write to the frame buffer just like it writes to the dat
 For (x, y) coordinates where $x \in {0, 1, ... 1023}$ and $y \in {0, 1, ..., 767}$ the memory address becomes \verb|0x90000000 + (y << 10) + x|. You can assume that all writes to the framebuffer will be in the form of \verb|sb| (store byte) instructions.
 
 \subsection{Chrontel Chip}
-The Chrontel CH7301C DVI Transmitter Device on our FPGA is a simple interface to output DVI display data. It includes bypass controls to allow VGA output, which is what we will use.
+The Chrontel CH7301C DVI Transmitter Device on the ML505 board can receive digital pixel data over a parallel bus from the FPGA, and it can output a DVI video signal to a monitor. It can also drive an analog VGA output when VGA-bypass mode is enabled. The datasheet for this chip can be found in the \verb|useful_docs| folder.
 
-\begin{figure}[hbt]
+\begin{figure}[H]
 \begin{center}
 	\includegraphics[width=6.5in]{dvi_block}
-	\caption{Chrontel Transmitter Block Diagram}
+	\caption{Chrontel chip block diagram - from datasheet}
 	\label{fig:dvi_block}
 \end{center}
-1\end{figure}
-
+\end{figure}
 
 \subsubsection{Control Registers}
+Just like the AC97 codec, the Chrontel video chip has many internal registers that configure how it operates. The Chrontel chip receives read and write register commands over I2C, which you tested in the previous section. Below is a reduced list of the registers to write to. See the Chrontel datasheet for more details.
 
-There are sequence of registers we need to set to activate the DVI device and begin transmission. These registers will be written over I2C. Below is a reduced list of our key registers. See the Chrontel datasheet for more detail. 
-
-\begin{table}[hbt]
+\begin{table}[H]
 	\begin{center}
 		\caption{Chrontel Control Registers}
 		\label{chrontel_registers}
@@ -1540,20 +1539,36 @@ There are sequence of registers we need to set to activate the DVI device and be
 			8'h48 & Test Pattern & 8'h18 & 8'h19 \\
 			8'h49 & Power Management & 8'h01 & 8'hC0 \\
 			8'h56 & DVI Sync Polarity & 8'h00 & 8'h00 \\
+			8'd1D & Input Clock Register & 8'h00 & 8'h0F \\
+			8'h1F & Input Data Format & 8'h00 & 8'h83 
 		\end{tabular}
 	\end{center}
 \end{table}
 
-These registers will be set via the I2C software. The slave device address for the Chrontel device is 0x76.
+These registers will be set via the \verb|graphics| program; it is all done for you. The slave device address for the Chrontel device is 0x76.
 
-\subsubsection{Hookup}
+\subsubsection{Chrontel Chip I/O}
+The Chrontel chip takes several inputs that represent video data. Here is a list of relevant signals (they are all outputs from the FPGA and inputs to the chip):
 
-As with the AC97 device, we have to add the DVI device to the top module. Be sure the following are added to your top module and the UCF. Otherwise, run \verb|git pull staff master|. 
+\begin{itemize}
+	\item \textbf{DVI\_XCLK\_N, DVI\_XCLK\_P} - A differential clock input to the Chrontel chip. The chip uses this clock to sample the data lines. For achieving a 1024 x 768 resolution with a 60 Hz refresh rate, this clock is set at 65 Mhz. It is generated and driven for you in \verb|ml505top| and \verb|src/video/dvi_controller.v|.
+	
+	\item \textbf{DVI\_RESET\_B} - An active-low reset input to the Chrontel chip. This is permanently held high in our design since we will be resetting the chip over I2C rather than using this signal.
+	
+	\item \textbf{DVI\_D [11:0]} - The data bus representing the color data for a given pixel. The details on how to drive this bus can be found on page 7 and page 10 of the datasheet. We are using IDF (input data format) = 3 in our controller. This bus is latched by the chip on both the rising and falling edges of the \verb|XCLK|.
+	
+	\item \textbf{DVI\_V} - Vertical sync input to the Chrontel chip. Should be driven \underline{active-low}. Tells the chip when a new video frame is about to start.
+	
+	\item \textbf{DVI\_H} - Horizontal sync input to the Chrontel chip. Should be driven \underline{active-low}. This tells the chip when a new horizontal line is about to start.
+	
+	\item \textbf{DVI\_DE} - Data enable input to the Chrontel chip. The \verb|DVI_D| bus' data is valid for the chip to latch when this signal is asserted \underline{active-high}.
+\end{itemize}
 
-v
+All these signals are driven using the \verb|dvi_controller| located in \verb|src/video/dvi_controller.v|
 
+% specify the source file dvi_controller.v
 
-\subsection{VGA}
+\subsection{Building the DVI Controller}
 Since we are using the VGA bypass on the Chrontel device, we have to generate the necessary signals for VGA. Thus we must understand the VGA protocol.
 
 \subsubsection{Timing}
@@ -1610,7 +1625,43 @@ We will be using 1024 x 768 at a 60 Hz refresh rate. This will require us to hav
 
 We will be using one-bit color: either black or "white". We will tint our "white" a slight blue. This implementation is fairly simple expand to 3-color RGB and to multi-bit RGB, with 5-bits of color each. This is not a requirement of the project, but you are welcome to try it for extra credit.
 
+\subsubsection{Data Formatting}
+The Chrontel device supports multiple schemes for transferring color information over the 12-bit lines. We will be using IDF = 3 with "XCLK 1x" as listed in the datasheet. This provides us with up to 15-bit RGB color. For simplicity however, we are using only 1-bit color. We must translate our 1 bit to 15 bits. Use the following scheme. It will yield a light blue tint for "1," and black for "0."
+
+\begin{table}[hbt]
+	\begin{center}
+		\caption{Colors}
+		\label{colors}
+		\begin{tabular}{l l l l}
+			\toprule
+			\textbf{Pixel Value} & \textbf{Red} & \textbf{Green} & \textbf{Blue} \\
+			\midrule
+			1 & 5'b11000 & 5'b11000 & 5'b11111 \\
+			0 & 5'b0  & 5'b0 & 5'b0 \\
+		\end{tabular}
+	\end{center}
+\end{table}
+
+\begin{figure}[hbt]
+\begin{center}
+	%\includegraphics[width=6.5in]{chrontel_data_timing}
+	%\includegraphics[width=6.5in]{idf3}
+	\caption{Chrontel Data Timing}
+	\label{fig:chrontel_data_timing}
+\end{center}
+\end{figure}
+
+You will note that the 12-bit data input changes on both rising and falling clock edges. To support this, we will be buffer the rising phase data and the falling phase data with an ODDR buffer primitive. This buffer will update on both clock edges and can take two different inputs.
+
+
+
+\subsubsection{Hookup}
+
+As with the AC97 controller, we have to add the DVI controller to \verb|ml505top|. Be sure the following are added to your top module and the UCF. Otherwise, run \verb|git pull staff master|.
+
 \subsection{DVI Testbench}
+
+Your task is to build a controller that reads from the frame buffer and provides all the necessary controls for the Chrontel device. This includes the color data, the vertical and horizontal VGA sync signals, the differential XCLK as shown in the Chrontel data timing diagram, and the enable signal. 
 
 
 \subsection{Graphics Hardware Acceleration}
