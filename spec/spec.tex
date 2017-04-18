@@ -975,7 +975,7 @@ In addition to the command interface, the bios also allows you to load programs 
 
 This stores the \verb|.coe| file at the specified hexadecimal address. In order to write into both the data and instruction memories, remember to set the top nibble to 0x3 (i.e. \verb|coe_to_serial echo.coe 30000000|, assuming the \verb|.ld| file sets the base address to 0x10000000). You also need to ensure that the stack and base address are set properly (See Section \ref{soft_append}).
 
-For example, before making the \verb|mmult| program you should have set the set the base address to \verb|0x10006000| (see \ref{mmult}). Therefore, when loading the \verb|mmult| program to the FPGA you should place it into the memory that it starts aligned with the base address: \verb|coe_to_serial mmult.coe 30006000|. Then, you can start in in your screen session by using \verb|jal 30006000|.
+For example, before making the \verb|mmult| program you should have set the set the base address to \verb|0x10006000| (see \ref{mmult}). Therefore, when loading the \verb|mmult| program to the FPGA you should place it into the memory that it starts aligned with the base address: \verb|coe_to_serial mmult.coe 30006000|. Then, you can start in in your screen session by using \verb|jal 10006000|.
 
 \subsection{Target Clock Frequency}
 By default, the minimum clock period is set at 50MHz. With a good design, you should be able to meet this constraint, though it may take some tweaking. At the end of the \verb|make| run, pay attention and make sure it says that you met all timing constraints. If you failed, the timing reports in \verb|make report| can give you a good idea of where your critical path is so you can attempt to optimize.
