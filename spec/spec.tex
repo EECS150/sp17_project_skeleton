@@ -1678,7 +1678,7 @@ You will note that the 12-bit data input changes on both rising and falling cloc
 
 \subsubsection{Hookup}
 
-You will need to instantiate your DVI controller and the framebuffer in \verb|ml505top|. You can add additional ports to your CPU so it can write to the framebuffer.
+You will need to instantiate your DVI controller and the framebuffer in \verb|ml505top|. You can add additional ports to your CPU so it can write to the framebuffer. In \verb|ml505top| the reset signal to be used with your DVI controller should be \underline{video\_reset}, NOT \verb|reset|.
 
 \subsection{DVI Controller Testing}
 
