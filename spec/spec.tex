@@ -1720,6 +1720,20 @@ Run this testbench as usual once you have hooked up the framebuffer and DVI cont
 	\centerline{\includegraphics[height=4cm]{dvi_controller_integration_testbench_output.png}}
 \end{figure}
 
+\subsubsection{Testing on the FPGA!}
+
+Once all these testbenches look good \verb|make| and \verb|make impact| your design as usual. Connect the DVI cable from a monitor to the ML505's DVI port; you may have to unplug the monitor from a workstation.
+
+Put the \verb|graphics| program on your FPGA using \verb|coe_to_serial| as usual. Once you \verb|jal 10006000| to it and can see the \verb|graphics >| prompt, you have access to these commands.
+
+\begin{enumerate}
+	\item \textbf{setup} - You should run this to configure the Chrontel chip over I2C
+	\item \textbf{test\_pattern} - This will configure the Chrontel chip to output a color bar test pattern over the video cable. To go back to framebuffer fetch mode run 'setup' again.
+	\item \textbf{fill} [0/1] - This will fill the framebuffer with either 0s or 1s.
+	\item \textbf{swline} [0/1] x0 y0 x1 y1 - This will draw a line of color 0 or 1 from (x0, y0) to (x1, y1) using the CPU.
+	\item \textbf{pixel} [0/1] x y - This will draw a single position at coordinate (x, y). This is useful for checking that all corners of the video frame can be written to.
+	\item \textbf{exit} - Return to BIOS.
+\end{enumerate}
 
 \subsection{Graphics Hardware Acceleration}
 Coming soon!
@@ -1727,17 +1741,11 @@ Coming soon!
 \subsubsection{Line Drawing}
 Coming soon!
 
-
 \subsubsection{Arbiter}
 Coming soon!
 
 \subsubsection{Hookup}
 Coming soon!
-
-
-\subsection{Graphics Software}
-Coming soon!
-
 
 \subsection{Checkpoint 3 Deliverables Summary}
 
@@ -1746,7 +1754,7 @@ Coming soon!
 		\toprule
 		\textbf{Deliverable} & \textbf{Due Date} & \textbf{Description} \\
 		\midrule
-		I2C memory map + VGA controller + line drawing accelerator & \audioDueDate - Checkoff time in the evening TBA & Demonstrate a working VGA color bar test. Demonstrate line or image drawing from both the CPU and the accelerator \\
+		I2C memory map + VGA controller + line drawing accelerator & \ethernetDueDate \space - \dueDateTime & Demonstrate a working VGA color bar test. Demonstrate line or image drawing from both the CPU and the accelerator \\
 		\bottomrule
 	\end{tabular}
 \end{center}
