@@ -109,3 +109,36 @@ NET  AUDIO_SYNC           LOC="AF19";  # Bank 4, Vcco=3.3V, No DCI
 NET  AUDIO_SYNC           IOSTANDARD=LVCMOS33;
 NET  FLASH_AUDIO_RESET_B  LOC="AG17";  # Bank 4, Vcco=3.3V, No DCI
 NET  FLASH_AUDIO_RESET_B  IOSTANDARD=LVCMOS33;
+
+NET "IIC_SCL_VIDEO"           LOC="U27";
+NET "IIC_SCL_VIDEO"           IOSTANDARD="LVCMOS18";
+NET "IIC_SDA_VIDEO"           LOC="T29";
+NET "IIC_SDA_VIDEO"           IOSTANDARD="LVCMOS18";
+
+NET  "DVI_D[*]"               IOSTANDARD="LVCMOS33";
+NET  "DVI_D[0]"               LOC="AB8";
+NET  "DVI_D[1]"               LOC="AC8";
+NET  "DVI_D[2]"               LOC="AN12";
+NET  "DVI_D[3]"               LOC="AP12";
+NET  "DVI_D[4]"               LOC="AA9";
+NET  "DVI_D[5]"               LOC="AA8";
+NET  "DVI_D[6]"               LOC="AM13";
+NET  "DVI_D[7]"               LOC="AN13";
+NET  "DVI_D[8]"               LOC="AA10";
+NET  "DVI_D[9]"               LOC="AB10";
+NET  "DVI_D[10]"              LOC="AP14";
+NET  "DVI_D[11]"              LOC="AN14";
+
+NET  "DVI_DE"                 LOC="AE8";
+NET  "DVI_DE"                 IOSTANDARD="LVCMOS33";
+NET  "DVI_H"                  LOC="AM12";
+NET  "DVI_H"                  IOSTANDARD="LVCMOS33";
+NET  "DVI_RESET_B"            LOC="AK6";
+NET  "DVI_RESET_B"            IOSTANDARD="LVCMOS33";
+NET  "DVI_V"                  LOC="AM11";
+NET  "DVI_V"                  IOSTANDARD="LVCMOS33";
+NET  "DVI_XCLK_N"             LOC="AL10";
+NET  "DVI_XCLK_N"             IOSTANDARD="LVCMOS33";
+NET  "DVI_XCLK_P"             LOC="AL11";
+NET  "DVI_XCLK_P"             IOSTANDARD="LVCMOS33";
+
