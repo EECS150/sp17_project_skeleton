@@ -1480,7 +1480,7 @@ To run the testbench,
 \subsubsection{I2C Testing on the FPGA}
 Once things work in simulation, \verb|make| and \verb|make impact| your design to the FPGA. Load the \verb|graphics| program in \verb|software/graphics| into your CPU using \verb|coe_to_serial| as usual, and \verb|jal| to it from the BIOS.
 
-When you see the \verb|graphics >| prompt, issue the command \verb|setup|. The program will attempt to perform I2C write commands to the Chrontel Video Chip to configure it properly. Looking at the \verb|graphics.c| file in \verb|software| you can see that it performs an I2C read after every I2C write and prints out the data it got in the \verb|i2c_setup()| function. You need to verify that the values that was read over I2C match the values that was written to the chip.
+When you see the \verb|graphics >| prompt, issue the command \verb|setup|. The program will attempt to perform I2C write commands to the Chrontel Video Chip to configure it properly. Looking at the \verb|graphics.c| file in \verb|software| you can see that it performs an I2C read after every I2C write and prints out the data it got in the \verb|i2c_setup()| function. You need to verify that the values that were read over I2C match the values that were written to the chip; the values are printed out.
 
 As an additional check, at the end of the \verb|i2c_setup()| function, the Chrontel chip's Version and Device IDs are printed out. Look up those values in the Chrontel chip's datasheet (in \verb|useful_docs|) and verify that they match what was printed.
 
@@ -1509,6 +1509,16 @@ The CPU will be able to write to the frame buffer just like it writes to the dat
 \end{table}
 
 For (x, y) coordinates where $x \in {0, 1, ... 1023}$ and $y \in {0, 1, ..., 767}$ the memory address becomes \verb|0x90000000 + (y << 10) + x|. You can assume that all writes to the framebuffer will be in the form of \verb|sb| (store byte) instructions.
+
+The framebuffer's block RAM needs to be built. To do this:
+\begin{enumerate}
+	\item Go to \verb|hardware/src/video/framebuffer_ram|
+	\item Run \verb|./build|
+	\item Open up \verb|block_mem_1x786432.v| and make sure you have a dual ported block RAM that was generated
+	\item The module you should instantiate wraps the block RAM and is located in\\ \verb|hardware/src/video/frame_buffer_1_786432.v|.
+\end{enumerate}
+
+You only need to do this once.
 
 \subsection{Chrontel Chip}
 The Chrontel CH7301C DVI Transmitter Device on the ML505 board can receive digital pixel data over a parallel bus from the FPGA, and it can output a DVI video signal to a monitor. It can also drive an analog VGA output when VGA-bypass mode is enabled. The datasheet for this chip can be found in the \verb|useful_docs| folder.
@@ -1539,13 +1549,12 @@ Just like the AC97 codec, the Chrontel video chip has many internal registers th
 			8'h48 & Test Pattern & 8'h18 & 8'h19 \\
 			8'h49 & Power Management & 8'h01 & 8'hC0 \\
 			8'h56 & DVI Sync Polarity & 8'h00 & 8'h00 \\
-			8'd1D & Input Clock Register & 8'h00 & 8'h0F \\
 			8'h1F & Input Data Format & 8'h00 & 8'h83 
 		\end{tabular}
 	\end{center}
 \end{table}
 
-These registers will be set via the \verb|graphics| program; it is all done for you. The slave device address for the Chrontel device is 0x76.
+These registers will be set via the \verb|graphics| program; it is all done for you. The slave device address for the Chrontel chip is 0x76.
 
 \subsubsection{Chrontel Chip I/O}
 The Chrontel chip takes several inputs that represent video data. Here is a list of relevant signals (they are all outputs from the FPGA and inputs to the chip):
@@ -1564,28 +1573,26 @@ The Chrontel chip takes several inputs that represent video data. Here is a list
 	\item \textbf{DVI\_DE} - Data enable input to the Chrontel chip. The \verb|DVI_D| bus' data is valid for the chip to latch when this signal is asserted \underline{active-high}.
 \end{itemize}
 
-All these signals are driven using the \verb|dvi_controller| located in \verb|src/video/dvi_controller.v|
-
-% specify the source file dvi_controller.v
+All these signals are driven using the \verb|dvi_controller| located in \verb|src/video/dvi_controller.v|. You will develop this module in this checkpoint.
 
 \subsection{Building the DVI Controller}
-Since we are using the VGA bypass on the Chrontel device, we have to generate the necessary signals for VGA. Thus we must understand the VGA protocol.
+To send video data to the Chrontel chip, we need to strobe the \verb|DVI_V|, \verb|DVI_H|, \verb|DVI_DE|, and \verb|DVI_D[11:0]| signals appropriately. The way to drive these signals comes from the VGA timing spec.
 
 \subsubsection{Timing}
 
-\begin{figure}[hbt]
+\begin{figure}[H]
 \begin{center}
-	\includegraphics[width=4in]{vga_overview}
+	\includegraphics[height=4cm]{vga_overview}
 	\caption{VGA timing scheme}
 	\label{fig:vga_overview}
 \end{center}
 \end{figure}
 
-The VGA protocol uses a strict clock synchronization protocol to draw each pixel on screen from left to right, then top to bottom. It uses two synchronization signals: a horizontal sync and a vertical sync. The vertical sync signal denotes the beginning of a image, or frame. The horizontal sync signal denotes the beginning of each horizontal line of pixels. Both signals are active low.
+The VGA protocol uses a strict clock synchronization protocol to draw each pixel on screen from left to right, then top to bottom. It uses two synchronization signals: a horizontal sync and a vertical sync. The vertical sync signal denotes the beginning of a image, or frame. The horizontal sync signal denotes the beginning of each horizontal line of pixels. Both signals are \underline{active low}.
 
-For each sync signals, there are 4 major components: the sync pulse, the back porch immediately following, the display active time, and the front porch before the next sync signal. Only during the display active time do we want to be sending valid data to be displayed.
+For each of sync signals, there are 4 major components: the sync pulse, the back porch immediately following, the display active time, and the front porch before the next sync signal. Only during the display active time do we want to be sending valid data to the Chrontel chip.
 
-\begin{figure}
+\begin{figure}[H]
 \begin{center}
 	\includegraphics[width=4in]{vga_timing}
 	\caption{VGA timing detailed}
@@ -1600,13 +1607,13 @@ For each sync signals, there are 4 major components: the sync pulse, the back po
 Note that during the vertical sync pulse, the horizontal sync pulse should be inactive as to not denote the start of a line.
 
 \subsubsection{Parameters}
-We will be using 1024 x 768 at a 60 Hz refresh rate. This will require us to have 65 MHz clock and the following timing parameters.
+We will be using a resolution of 1024 x 768 at a 60 Hz refresh rate. This will require us to use a 65 MHz clock and the following timing parameters.
 
-\begin{table}[hbt]
+\begin{table}[H]
 	\begin{center}
 		\caption{VGA Timing for 1024 x 768 at 60 Hz (XGA)}
 		\label{vga_timing_table}
-		\begin{tabular}{l l l l}
+		\begin{tabular}{l l l}
 			\toprule
 			\textbf{Name} & \textbf{Pixel/Line Length} & \textbf{Real Time}\\
 			\midrule
@@ -1623,10 +1630,26 @@ We will be using 1024 x 768 at a 60 Hz refresh rate. This will require us to hav
 	\end{center}
 \end{table}
 
-We will be using one-bit color: either black or "white". We will tint our "white" a slight blue. This implementation is fairly simple expand to 3-color RGB and to multi-bit RGB, with 5-bits of color each. This is not a requirement of the project, but you are welcome to try it for extra credit.
+Here is how the sync and DE signals should be driven:
+
+\begin{enumerate}
+	\item At the start of the frame, assert \verb|DVI_V| for \verb|V Sync Pulse| horizontal lines (each horizontal line consists of 1344 pixels or clock periods)
+	\item Don't assert any signals for \verb|V Back Porch| horizontal lines
+	\item For \verb|V Visble Area| lines perform the following sequence:
+	\begin{enumerate}
+		\item Assert \verb|DVI_H| for \verb|H Sync Pulse| clock periods
+		\item Don't assert any signals for \verb|H Back Porch| clock periods
+		\item Assert \verb|DVI_DE| and place the pixel data on \verb|DVI_D[11:0]| for \verb|H Visible Area| clock periods
+		\item Don't assert any signals for \verb|H Front Porch| clock periods
+	\end{enumerate}
+	\item Don't assert any signals for \verb|V Front Porch| horizontal lines
+	\item Start again at step \#1 to send the next video frame
+\end{enumerate}
+
+We will be using one-bit color: either black or "white". We will tint our "white" a slight blue. This implementation is simple to expand to 3-color RGB and to multi-bit RGB, with 5-bits of color each. This is not a requirement of the project, but you are welcome to try it for extra credit.
 
 \subsubsection{Data Formatting}
-The Chrontel device supports multiple schemes for transferring color information over the 12-bit lines. We will be using IDF = 3 with "XCLK 1x" as listed in the datasheet. This provides us with up to 15-bit RGB color. For simplicity however, we are using only 1-bit color. We must translate our 1 bit to 15 bits. Use the following scheme. It will yield a light blue tint for "1," and black for "0."
+The Chrontel chip supports multiple schemes for transferring color information over the 12-bit \verb|DVI_D| bus. We will be using IDF = 3 with "XCLK 1x" as listed in the datasheet. This provides us with up to 15-bit RGB color. For simplicity however, we are using only 1-bit color. We must translate our 1 bit to 15 bits. Use the following scheme. It will yield a light blue tint for "1," and black for "0."
 
 \begin{table}[hbt]
 	\begin{center}
@@ -1644,25 +1667,73 @@ The Chrontel device supports multiple schemes for transferring color information
 
 \begin{figure}[hbt]
 \begin{center}
-	%\includegraphics[width=6.5in]{chrontel_data_timing}
-	%\includegraphics[width=6.5in]{idf3}
+	\includegraphics[width=6.5in]{chrontel_data_timing}
+	\includegraphics[width=6.5in]{idf3}
 	\caption{Chrontel Data Timing}
 	\label{fig:chrontel_data_timing}
 \end{center}
 \end{figure}
 
-You will note that the 12-bit data input changes on both rising and falling clock edges. To support this, we will be buffer the rising phase data and the falling phase data with an ODDR buffer primitive. This buffer will update on both clock edges and can take two different inputs.
-
-
+You will note that the 12-bit data input changes on both rising and falling clock edges. To support this, we will be buffer the rising edge data and the edge phase data with an ODDR buffer primitive. This buffer will update on both clock edges and can take two different inputs. Look at the provided skeleton in \verb|src/video/dvi_controller.v| for the instantiations of the ODDR primitives.
 
 \subsubsection{Hookup}
 
-As with the AC97 controller, we have to add the DVI controller to \verb|ml505top|. Be sure the following are added to your top module and the UCF. Otherwise, run \verb|git pull staff master|.
+You will need to instantiate your DVI controller and the framebuffer in \verb|ml505top|. You can add additional ports to your CPU so it can write to the framebuffer.
 
-\subsection{DVI Testbench}
+\subsection{DVI Controller Testing}
 
-Your task is to build a controller that reads from the frame buffer and provides all the necessary controls for the Chrontel device. This includes the color data, the vertical and horizontal VGA sync signals, the differential XCLK as shown in the Chrontel data timing diagram, and the enable signal. 
+Your task is to build a controller that reads from the frame buffer and provides all the necessary signals for the Chrontel chip. This includes the color data, the vertical and horizontal sync signals, the differential XCLK as shown in the Chrontel data timing diagram, and the data enable signal. We have provided you a skeleton in \verb|src/video/dvi_controller.v| to get started.
 
+\subsubsection{DVI Controller Testbench}
+Once you have made a first pass at the \verb|dvi_controller|, you can try running the \verb|dvi_controller_testbench| located in \verb|hardware/src/testbenches/dvi_controller_testbench.v|. This testbench writes color bars to the instantiated framebuffer and lets your DVI controller pull pixel data from the framebuffer and transmit it. We have also written a \verb|ch7301_model| which you can find in\\ \verb|hardware/src/testbenches/models/video_codec_model.v|. This model will perform timing checks on your sync signals and will print out the pixel data it receives from your controller.
+
+When running this testbench for the first time, you might see a ton of error output indicating various timing inconsistencies. Don't panic; start at the first timing violation and rerun the testbench when you think you have solved an issue. It is common for this model to print out many errors due to the strict timing bounds it enforces.
+
+In reality, when running your controller on the FPGA, the Chrontel chip is far more lenient towards timing imperfections so if you see timing discrepancies within a few nanoseconds, or even up to 16 nanoseconds, the controller will likely still work on the FPGA. Please ask a TA if you want to confirm whether it is OK to ignore an almost OK timing discrepancy.
+
+As the testbench runs, the \verb|video_codec_model| will write to a file at \verb|hardware/sim/build/video_data.txt|. The text in this file can be converted into an image by running this in \verb|hardware/sim|:
+
+\begin{minted}{bash}
+python video_data_to_images.py build/video_data.txt
+\end{minted}
+
+This script may take up to 30 seconds to run. Once it does you will see a folder called \verb|video_frames|. In this folder, you can run \verb|eog frame01.png| to open the image for viewing. You want to manually verify that the image looks like this:
+
+\begin{figure}[H]
+	\centerline{\includegraphics[height=4cm]{dvi_controller_testbench_output.png}}
+\end{figure}
+
+Each color bar should be 32-pixels high and they should alternate between light and dark. You should use the Measure tool in GIMP to verify this. Right click on the image when open in \verb|eog|, then click Open With $\rightarrow$ GIMP. In GIMP use the Measure tool (Shift + M) by clicking and dragging to verify the height of the color bars.
+
+\subsubsection{DVI Controller Integration Testbench}
+Once your color bars look good, let's test the DVI controller and framebuffer's interaction with your CPU. The integration testbench consists of 3 files:
+
+\begin{enumerate}
+	\item \verb|hardware/src/testbenches/dvi_controller_integration_testbench.v|
+	\item \verb|hardware/sim/tests/dvi_controller_integration_testbench.do|
+	\item \verb|software/dvi_controller_testbench/dvi_controller_testbench.c|
+\end{enumerate}
+
+Run this testbench as usual once you have hooked up the framebuffer and DVI controller in \verb|ml505top| and to your CPU's memory map. The software running on the CPU will run a function to draw a line from the top left to bottom right of the frame. This testbench will take longer to execute than the simple block-level testbench. Once it is does, you can create an image from the \verb|video_data| and check to see if a line has been drawn by your CPU. It should look like this (might have to zoom in to see the line):
+
+\begin{figure}[H]
+	\centerline{\includegraphics[height=4cm]{dvi_controller_integration_testbench_output.png}}
+\end{figure}
+
+\subsubsection{Testing on the FPGA!}
+
+Once all these testbenches look good \verb|make| and \verb|make impact| your design as usual. Connect the DVI cable from a monitor to the ML505's DVI port; you may have to unplug the monitor from a workstation.
+
+Put the \verb|graphics| program on your FPGA using \verb|coe_to_serial| as usual. Once you \verb|jal 10006000| to it and can see the \verb|graphics >| prompt, you have access to these commands.
+
+\begin{enumerate}
+	\item \textbf{setup} - You should run this to configure the Chrontel chip over I2C
+	\item \textbf{test\_pattern} - This will configure the Chrontel chip to output a color bar test pattern over the video cable. To go back to framebuffer fetch mode run 'setup' again.
+	\item \textbf{fill} [0/1] - This will fill the framebuffer with either 0s or 1s.
+	\item \textbf{swline} [0/1] x0 y0 x1 y1 - This will draw a line of color 0 or 1 from (x0, y0) to (x1, y1) using the CPU.
+	\item \textbf{pixel} [0/1] x y - This will draw a single position at coordinate (x, y). This is useful for checking that all corners of the video frame can be written to.
+	\item \textbf{exit} - Return to BIOS.
+\end{enumerate}
 
 \subsection{Graphics Hardware Acceleration}
 Coming soon!
@@ -1670,17 +1741,11 @@ Coming soon!
 \subsubsection{Line Drawing}
 Coming soon!
 
-
 \subsubsection{Arbiter}
 Coming soon!
 
 \subsubsection{Hookup}
 Coming soon!
-
-
-\subsection{Graphics Software}
-Coming soon!
-
 
 \subsection{Checkpoint 3 Deliverables Summary}
 
@@ -1689,7 +1754,7 @@ Coming soon!
 		\toprule
 		\textbf{Deliverable} & \textbf{Due Date} & \textbf{Description} \\
 		\midrule
-		I2C memory map + VGA controller + line drawing accelerator & \audioDueDate - Checkoff time in the evening TBA & Demonstrate a working VGA color bar test. Demonstrate line or image drawing from both the CPU and the accelerator \\
+		I2C memory map + VGA controller + line drawing accelerator & \ethernetDueDate \space - \dueDateTime & Demonstrate a working VGA color bar test. Demonstrate line or image drawing from both the CPU and the accelerator \\
 		\bottomrule
 	\end{tabular}
 \end{center}
