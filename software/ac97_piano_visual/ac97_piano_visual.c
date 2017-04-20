@@ -185,7 +185,7 @@ int main() {
             uint32_t button_state = GPIO_FIFO_DATA;
             if ((button_state & 0x1) && (button_state & 0x2)) {
                 // Rotary wheel left spin
-                decimation_level--;
+                decimation_level = decimation_level == 0 ? 0 : decimation_level - 1;
             }
             if (!(button_state & 0x1) && (button_state & 0x2)) {
                 // Rotary wheel right spin
