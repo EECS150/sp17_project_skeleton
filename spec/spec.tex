@@ -1803,7 +1803,7 @@ Scrolling down a little further, you will see an instantiation of \verb|PLL_BASE
 
 The \verb|CLKIN| input clock of the PLL. is driven by the 100 Mhz \verb|user_clk_g| (buffered \verb|USER_CLK|). The PLL multiplies the frequency of this input clock by the \verb|CLKFBOUT_MULT| parameter, which is set to 6. Thus, internally, the PLL creates a 600 Mhz clock. Then, this multiplied clock is divided by the \verb|CLKOUT0_DIVIDE| parameter. In our case, this parameter is set to \verb|600_000_000 / CPU_CLOCK_FREQ| and \verb|CPU_CLOCK_FREQ = 50_000_000|. Thus our divide parameter is 12. Finally, the multiplied and divided clock ($\times 6 \div 12 = \frac{1}{2}$) shows up at the \verb|CLKOUT0| output clock of the PLL, which is connected to \verb|cpu_clk|. The \verb|cpu_clk| is buffered and \verb|cpu_clk_g| is used in our CPU and other modules.
 
-Take a look at the \verb|CPU_CLOCK_FREQ| parameter at the top of \verb|ml505top|. This sets the clock frequency we want to synthesize from the 100 Mhz \verb|USER_CLK| to be used in the rest of our design. You can alter this parameter to change the CPU clock frequency, but it can't be set arbitrarily, and there are a few caveats. You can only set this value to an integer divisor of 600 Mhz, unless you change the multiplication parameter in the PLL. A few frequencies to try are: 60 Mhz, 75 Mhz, and 100 Mhz. You can also try frequencies in the middle and adjust the multiply parameter for more variety.
+Take a look at the \verb|CPU_CLOCK_FREQ| parameter at the top of \verb|ml505top|. This sets the clock frequency we want to synthesize from the 100 Mhz \verb|USER_CLK| to be used in the rest of our design. You can alter this parameter to change the CPU clock frequency, but it can't be set arbitrarily, and there are a few caveats. You can only set this value to an integer divisor of 600 Mhz, unless you change the multiplication parameter in the PLL. A few frequencies to try are: 60 Mhz, 75 Mhz, and 100 Mhz. You can also try frequencies in the middle and even adjust the multiply parameter for more variety.
 
 \subsection{Critical Path Identification}
 Begin by pulling the latest skeleton files from the staff repository: \verb|git pull staff master|. After running \verb|make|, your FPGA design will be placed and routed, and timing analysis will be performed to determine the critical path(s) of your design. The timing tools will automatically figure out the CPU clock timing constraint based on the multiply-divide ratio you used in your PLL. 
@@ -1859,7 +1859,7 @@ RAMB36_X2Y15.CLKBWRCLKL Trcck_ADDRB           0.347   CPU/instrMem
 Total 19.352ns (3.953ns logic, 15.399ns route) (20.4% logic, 79.6% route)
 \end{minted}
 
-The first attribute for a timing path is the slack. Slack describes how much extra time the combinational delay of the path has before the rising edge of the clock. It is a setup time attribute. Positive slack means that this timing path resolves and settles before the rising edge of the clock, and negative slack indicates a setup time violation.
+The first attribute for a timing path is the slack. Slack describes how much extra time the combinational delay of the path has before the rising edge of the receiving clock. It is a setup time attribute. Positive slack means that this timing path resolves and settles before the rising edge of the clock, and negative slack indicates a setup time violation.
 
 You will then see the source and destination of the path which you can usually map to a net in your design. Afterwards, comes the actual logic path that starts at the source and follows some logic in your design until it gets to the destination. In the example above, you can make out that the logic path represents data memory forwarding into the ALU, which is then used for a branch/jal/jalr next PC calculation.
 
@@ -1928,9 +1928,9 @@ Here is a suggested outline and page breakdown for your report. You do not need 
 	\item \textbf{High-level organization}. How is your project broken down into pieces. Block diagram level-description. We are most interested in how you broke the CPU datapath and control
 	down into submodules, since the code for the later checkpoints will be pretty consistent 	across all groups. Please include an updated block diagram ($\approx$ 1 page).
 	
-	\item \textbf{Detailed Description of Sub-pieces}. Describe how your circuits work. Concentrate here on novel or non-standard circuits. Also, focus your attention on the parts of the	design that were not supplied to you by the teaching staff. For instance, describe the details of your AC97 controller, FIFOs, and any extra credit work. ($\approx$ 2 pages).
+	\item \textbf{Detailed Description of Sub-pieces}. Describe how your circuits work. Concentrate here on novel or non-standard circuits. Also, focus your attention on the parts of the	design that were not supplied to you by the teaching staff. For instance, describe the details of your AC97 controller, FIFOs, DVI controller, and any extra credit work. ($\approx$ 2 pages).
 	
-	\item \textbf{Status and Results}. What is working and what is not? At what frequency (50 or greater) does your design run? Do certain checkpoints work at a higher clock speed while others only	run at 50 MHz? Please also provide the number of LUTs and SLICE registers used by your design, which can be found by running \verb|make report|. Also include the CPI and minimum clock period of running \verb|mmult| for the various optimizations you made to your processor. This section is particularly important for non-working designs (to help us assign partial credit). ($\approx$ 1-2 pages).
+	\item \textbf{Status and Results}. What is working and what is not? At what frequency (50Mhz or greater) does your design run? Do certain checkpoints work at a higher clock speed while others only	run at 50 MHz? Please also provide the number of LUTs and SLICE registers used by your design, which can be found by running \verb|make report|. Also include the CPI and minimum clock period of running \verb|mmult| for the various optimizations you made to your processor. This section is particularly important for non-working designs (to help us assign partial credit). ($\approx$ 1-2 pages).
 	
 	\item \textbf{Conclusions}. What have you learned from this experience? How would you do it different next time? ($\approx$ 0.5 page).
 	
@@ -1949,7 +1949,10 @@ The following are suggested projects that may or may not be feasible in one week
 	\item 5-Stage Pipeline: Add more pipeline stages and push the clock frequency past 100MHz
 	\item Audio Recording: Enable capturing mic input from the AC97 controller (for undergrads)
 	\item RISC-V M Extension: Extend the processor with a hardware multiplier and divider
+	\item 3 (or more) bit color: Increase the size of the framebuffer to have control of the RGB content of each pixel
+	\item Dynamic Resolution: Allow the processor to control the output resolution of the DVI controller at runtime
 \end{itemize}
+
 When the time is right, if you are interested in implementing any of these, see the staff for more details.
 
 \subsection{Project Grading}
