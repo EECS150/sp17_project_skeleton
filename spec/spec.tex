@@ -1735,17 +1735,25 @@ Put the \verb|graphics| program on your FPGA using \verb|coe_to_serial| as usual
 	\item \textbf{exit} - Return to BIOS.
 \end{enumerate}
 
-\subsection{Graphics Hardware Acceleration}
-Coming soon!
+\subsection{Hardware Accelerated Line Drawer (Optional)}
+This section is optional for checkpoint 3. If you choose to do it, you will be awarded at least 2\% extra credit for the project grade.
 
 \subsubsection{Line Drawing}
-Coming soon!
+We have included a skeleton accelerator in \verb|hardware/src/video/accelerator.v|. The purpose of this module is to receive a 'line draw' command from the CPU and then execute the correct pixel writes to the framebuffer to draw a line. The \verb|accelerator| should be clocked with the \verb|cpu_clk_g|.
+
+You should modify this module to implement Bresenham's Algorithm. You can find some helpful slides here: \url{https://inst.eecs.berkeley.edu/~cs150/fa10/Lab/CP3/LineDrawing.pdf}. 
+
+You should implement a ready/valid interface using the \verb|RX_ready| and \verb|RX_valid| signals. When \verb|RX_valid| is pulsed by the CPU, you should register \verb|x0,y0,x1,y1,color| internally and should pull \verb|RX_ready| low until the line is written to the framebuffer.
 
 \subsubsection{Arbiter}
-Coming soon!
+With the addition of the \verb|accelerator|, the 
 
 \subsubsection{Hookup}
 Coming soon!
+
+\subsubsection{Extend Graphics Program}
+
+\subsubsection{Testing on the FPGA}
 
 \subsection{Checkpoint 3 Deliverables Summary}
 
