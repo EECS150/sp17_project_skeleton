@@ -1735,6 +1735,17 @@ Put the \verb|graphics| program on your FPGA using \verb|coe_to_serial| as usual
 	\item \textbf{exit} - Return to BIOS.
 \end{enumerate}
 
+\subsubsection{AC97 Visual Piano}
+We have written a piano program which uses the DVI controller to display a live view of the waveform being sent to the AC97 controller. It can be found in \verb|software/ac97_piano_visual|.
+
+To use this program:
+\begin{enumerate}
+	\item Load and jal to the \verb|graphics| program. Execute the 'setup' command.
+	\item Load and jal to the \verb|ac97_piano_visual| program. Pressing a key should play a piano note through the headphone jack.
+	\item You can spin the rotary wheel to change the 'update rate/decimation factor' that's used to send the waveform to the framebuffer. Spinning the wheel left will 'zoom in' and spinning the wheel right will 'zoom out'. Pushing the wheel in will reset the 'decimation factor' to the default value.
+	\item You should be able to see how pressing a key with a higher note pitch results in a higher frequency sine waveform.
+\end{enumerate}
+
 \subsection{Hardware Accelerated Line Drawer (Optional)}
 This section is optional for checkpoint 3. If you choose to do it, you will be awarded at least 2\% extra credit for the project grade.
 
@@ -1746,14 +1757,19 @@ You should modify this module to implement Bresenham's Algorithm. You can find s
 You should implement a ready/valid interface using the \verb|RX_ready| and \verb|RX_valid| signals. When \verb|RX_valid| is pulsed by the CPU, you should register \verb|x0,y0,x1,y1,color| internally and should pull \verb|RX_ready| low until the line is written to the framebuffer.
 
 \subsubsection{Arbiter}
-With the addition of the \verb|accelerator|, the 
+With the addition of the \verb|accelerator|, the \verb|framebuffer| now has write contention between the CPU and the \verb|accelerator|. Since the \verb|framebuffer| only has 1 write port, only the CPU or the \verb|accelerator| can write to it on a given clock cycle. We resolve this issue using an arbiter. An implementation is provided for you in \verb|hardware/src/video/arbiter.v|.
 
-\subsubsection{Hookup}
-Coming soon!
+Our \verb|arbiter| is very simple; it always prioritizes the requests of the \verb|accelerator| over the CPU. You will use the \verb|arbiter| to hook the \verb|accelerator| and the CPU to the framebuffer in \verb|ml505top|.
+
+\subsubsection{Hookup + Testing}
+You should modify \verb|Riscv151.v| and/or \verb|ml505top.v| to instantiate your \verb|framebuffer| and \verb|arbiter|.
+
+You should create memory-mapped registers for \verb|x0,x1,y1,y0,color,fire| and you can decide what addresses they should map to. When a write to the \verb|fire| is performed, the \verb|RX_valid| signal should be pulsed for one cycle.
+
+To test the \verb|accelerator| you can modify the software in \verb|software/dvi_controller_testbench| to write to your memory mapped registers and trigger a line drawing. Then the DVI controller and model should function as usual. You can add to the memory map in \verb|software/151_library/memory_map.h| if you want.
 
 \subsubsection{Extend Graphics Program}
-
-\subsubsection{Testing on the FPGA}
+Once your accelerator works in simulation, you should extend the \verb|graphics| program to use your accelerator for drawing lines. In \verb|graphics.c|, add a command called 'hwline' which takes the same arguments as 'swline' but uses your accelerator instead of the CPU to draw the line. Now, test it on the FPGA.
 
 \subsection{Checkpoint 3 Deliverables Summary}
 
@@ -1762,7 +1778,7 @@ Coming soon!
 		\toprule
 		\textbf{Deliverable} & \textbf{Due Date} & \textbf{Description} \\
 		\midrule
-		I2C memory map + VGA controller + line drawing accelerator & \ethernetDueDate \space - \dueDateTime & Demonstrate a working VGA color bar test. Demonstrate line or image drawing from both the CPU and the accelerator \\
+		I2C memory map + VGA controller + line drawing accelerator & \ethernetDueDate \space - \dueDateTime & Demonstrate a working VGA color bar test. Demonstrate line or image drawing from both the CPU and the accelerator. Demonstrate the AC97 visual piano. \\
 		\bottomrule
 	\end{tabular}
 \end{center}
