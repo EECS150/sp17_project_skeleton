@@ -7,7 +7,7 @@
 
 void fill(uint8_t color) {
     int i;
-    for (i = 0; i < 7834272; i++) {
+    for (i = 0; i < 786432; i++) {
         (*((volatile uint8_t*)(FRAMEBUFFER_BASE + i))) = color & 0x1;
     }
 }

@@ -1,4 +1,4 @@
-`timescale 1ns/100ps
+`timescale 1ns/1ps
 
 /*
  * This is a behavioral model of the Chrontel CH7301C DVI Transmitter Device.
