@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ns/100fs
 
 /*
  * This is a behavioral model of the Chrontel CH7301C DVI Transmitter Device.
@@ -315,7 +315,7 @@ module ch7301c_model # (
                         // Horizontal front porch
                         hori_front_porch_start_time = $realtime;
                         if (vertical_line_count == vert_visible_area - 1) begin
-                            repeat (hori_front_porch) @(posedge dvi_xclk_p);
+                            repeat (hori_front_porch+1) @(posedge dvi_xclk_p); //need to include current edge
                             hori_front_porch_end_time = $realtime;
                             vert_front_porch_start_time = $realtime;
                             -> hori_front_porch_done;

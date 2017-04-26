@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ns/100fs
 
 /* ---------------
  * EECS151 FPGA Lab Spring 2017
