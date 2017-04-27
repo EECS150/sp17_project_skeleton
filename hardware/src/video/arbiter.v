@@ -29,6 +29,6 @@ module arbiter#(
 
     assign frame_wr_en = XL_wr_en || CPU_wr_en;
     assign frame_wr_addr = XL_wr_en ? XL_wr_addr : CPU_wr_addr;
-    assign frame_wr_data = XL_wr_en ? frame_wr_data : CPU_wr_data; 
+    assign frame_wr_data = XL_wr_en ? XL_wr_data : CPU_wr_data; 
 
 endmodule
